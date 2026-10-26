@@ -2,7 +2,8 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -15,11 +16,57 @@ class Farm(models.Model):
     )
     name = models.CharField(max_length=150)
     location = models.CharField(max_length=255)
+    latitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("-90")), MaxValueValidator(Decimal("90"))],
+    )
+    longitude = models.DecimalField(
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True,
+        validators=[
+            MinValueValidator(Decimal("-180")),
+            MaxValueValidator(Decimal("180")),
+        ],
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(latitude__isnull=True, longitude__isnull=True)
+                    | Q(latitude__isnull=False, longitude__isnull=False)
+                ),
+                name="farm_coordinates_both_or_neither",
+            ),
+            models.CheckConstraint(
+                condition=Q(latitude__isnull=True)
+                | Q(latitude__gte=Decimal("-90"), latitude__lte=Decimal("90")),
+                name="farm_latitude_in_range",
+            ),
+            models.CheckConstraint(
+                condition=Q(longitude__isnull=True)
+                | Q(longitude__gte=Decimal("-180"), longitude__lte=Decimal("180")),
+                name="farm_longitude_in_range",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError(
+                {
+                    "latitude": "Enter both coordinates, or leave both blank.",
+                    "longitude": "Enter both coordinates, or leave both blank.",
+                }
+            )
 
     def __str__(self):
         return f"{self.name} ({self.location})"

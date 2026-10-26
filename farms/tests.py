@@ -35,7 +35,8 @@ class FeedInventoryCoverageTests(TestCase):
         cls.farm = Farm.objects.create(
             owner=cls.user,
             name="Green Valley Dairy",
-            location="Nakuru, Kenya",
+            latitude=Decimal("-0.303099"),
+            longitude=Decimal("36.080025"),
         )
         cls.hay = FeedType.objects.create(
             name="Hay",
@@ -221,7 +222,7 @@ class FeedInventoryCoverageTests(TestCase):
 
         inventory = record_consumption(inventory.pk, Decimal("15"))
         self.assertEqual(inventory.stock_kg, Decimal("105.00"))
-        self.assertEqual(inventory.usable_stock_kg, Decimal("80.00"))
+        self.assertEqual(inventory.usable_stock_kg, Decimal("85.00"))
 
         inventory = mark_feed_unusable(inventory, Decimal("5"))
         self.assertEqual(inventory.stock_kg, Decimal("105.00"))

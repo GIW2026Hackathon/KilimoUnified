@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -12,7 +14,8 @@ class RiskAlertTests(TestCase):
 		cls.farm = Farm.objects.create(
 			owner=user,
 			name="Alert Farm",
-			location="Nakuru",
+			latitude=Decimal("-0.303099"),
+			longitude=Decimal("36.080025"),
 		)
 
 	def test_alert_defaults_to_active_and_accepts_fixed_choices(self):

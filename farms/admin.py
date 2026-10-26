@@ -6,9 +6,10 @@ from .models import Farm, FeedInventory, FeedType
 
 @admin.register(Farm)
 class FarmAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "location", "created_at")
-    search_fields = ("name", "location", "owner__username")
+    list_display = ("name", "owner", "latitude", "longitude", "created_at")
+    search_fields = ("name", "owner__username")
     list_filter = ("created_at",)
+    fields = ("owner", "name", "location", "latitude", "longitude")
 
 
 @admin.register(FeedType)

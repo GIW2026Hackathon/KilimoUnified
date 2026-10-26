@@ -1,6 +1,7 @@
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 
+from farms.models import Farm
 
 
 def home(request):
@@ -13,5 +14,6 @@ def home(request):
 def dashboard(request):
   context = {
     "user": request.user,
+    "farms": Farm.objects.filter(owner=request.user),
   }
   return render(request, "core/dashboard.html", context)
