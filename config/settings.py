@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'accounts',
     'core',
     'farms',
+    'weather',
+    'monitoring',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

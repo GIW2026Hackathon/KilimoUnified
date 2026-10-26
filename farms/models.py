@@ -5,7 +5,6 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
-from django.utils import timezone
 
 
 class Farm(models.Model):
@@ -23,7 +22,7 @@ class Farm(models.Model):
         ordering = ["name"]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.location})"
 
 
 class FeedType(models.Model):
@@ -40,7 +39,7 @@ class FeedType(models.Model):
         choices=Category.choices,
         default=Category.OTHER,
     )
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

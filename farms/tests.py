@@ -127,11 +127,24 @@ class FeedInventoryCoverageTests(TestCase):
                 )
 
     def test_unusable_and_reserved_stock_cannot_overlap(self):
-        inventory = self.make_inventory(
-            stock="100",
-            unusable="60",
-            reserved="50",
-            daily_use="10",
+        inventory = FeedInventory(
+            farm=self.farm,
+            feed_type=self.hay,
+            stock_kg=Decimal("100"),
+            unusable_kg=Decimal("60"),
+            reserved_kg=Decimal("50"),
+            daily_consumption_kg=Decimal("10"),
+        )
+
+        with self.assertRaises(ValidationError):
+            inventory.full_clean()
+
+    def test_negative_quantities_are_rejected_by_model_validation(self):
+        inventory = FeedInventory(
+            farm=self.farm,
+            feed_type=self.hay,
+            stock_kg=Decimal("-1"),
+            daily_consumption_kg=Decimal("0"),
         )
 
         with self.assertRaises(ValidationError):
