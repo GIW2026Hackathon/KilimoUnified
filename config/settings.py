@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 import os
+import secrets
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,7 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-wmic5u(ud%x^(eu&blh%v2zhwg&np3_uf7qj%^8ry)q6wodxa0'
+# Set DJANGO_SECRET_KEY in deployed environments. A process-local key keeps
+# development usable without embedding a reusable credential in the source.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY") or secrets.token_urlsafe(50)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -135,6 +138,10 @@ WEATHER_PROVIDER_TIMEZONE = os.environ.get(
 WEATHER_HTTP_TIMEOUT_SECONDS = float(
     os.environ.get("WEATHER_HTTP_TIMEOUT_SECONDS", "15")
 )
+
+# Operational starting points only; review with local dairy-farming practice.
+RISK_HIGH_COVERAGE_DAYS = os.environ.get("RISK_HIGH_COVERAGE_DAYS", "7")
+RISK_MEDIUM_COVERAGE_DAYS = os.environ.get("RISK_MEDIUM_COVERAGE_DAYS", "14")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

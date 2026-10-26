@@ -7,6 +7,7 @@ class RiskAlert(models.Model):
 		LOW = "LOW", _("Low")
 		MEDIUM = "MEDIUM", _("Medium")
 		HIGH = "HIGH", _("High")
+		UNKNOWN = "UNKNOWN", _("Unknown")
 
 	class Status(models.TextChoices):
 		ACTIVE = "ACTIVE", _("Active")
@@ -28,6 +29,10 @@ class RiskAlert(models.Model):
 	)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
+	evaluation = models.ForeignKey(
+		"monitoring.RiskEvaluation", null=True, blank=True,
+		on_delete=models.SET_NULL, related_name="alerts",
+	)
 
 	class Meta:
 		ordering = ["-created_at"]
@@ -48,3 +53,23 @@ class RiskAlert(models.Model):
 
 	def __str__(self):
 		return f"{self.get_risk_level_display()} risk at {self.farm.name}"
+
+
+class RiskEvaluation(models.Model):
+	"""Immutable snapshot of one deterministic farm risk assessment."""
+	farm = models.ForeignKey("farms.Farm", on_delete=models.CASCADE, related_name="risk_evaluations")
+	evaluated_at = models.DateTimeField(auto_now_add=True)
+	risk_level = models.CharField(max_length=10, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High"), ("UNKNOWN", "Unknown")])
+	inventory_risk_level = models.CharField(max_length=10, choices=[("LOW", "Low"), ("MEDIUM", "Medium"), ("HIGH", "High"), ("UNKNOWN", "Unknown")])
+	evidence = models.JSONField(default=dict)
+	explanation = models.TextField()
+	recommended_action = models.TextField()
+	ai_explanation = models.TextField(blank=True)
+	ai_generated_at = models.DateTimeField(null=True, blank=True)
+
+	class Meta:
+		ordering = ["-evaluated_at", "-pk"]
+		indexes = [models.Index(fields=["farm", "-evaluated_at"], name="risk_eval_farm_time_idx")]
+
+	def __str__(self):
+		return f"{self.risk_level} evaluation for {self.farm.name} at {self.evaluated_at}"

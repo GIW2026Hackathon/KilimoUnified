@@ -1,38 +1,28 @@
-{% extends 'base.html' %} {% block content %}
-<main class="min-h-screen bg-base-200 p-6">
-  <section class="card mx-auto mt-12 w-full max-w-lg bg-base-100 shadow-xl">
-    <div class="card-body">
-      <h1 class="card-title">Dashboard</h1>
-      <p>Welcome, {{ user.username }}!</p>
-      <section class="mt-4">
-        <h2 class="text-lg font-semibold">Your farms</h2>
-        {% if farms %}
-        <ul class="mt-2 space-y-2">
-          {% for farm in farms %}
-          <li>
-            <a
-              class="link link-hover"
-              href="{% url 'weather:farm_forecast' farm.id %}"
-              >{{ farm.name }} weather</a
-            >
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="mt-2 text-base-content/70">
-          No farms are linked to your account yet.
-        </p>
-        {% endif %}
-      </section>
-      <form
-        action="{% url 'accounts:logout' %}"
-        method="post"
-        class="card-actions mt-4"
-      >
-        {% csrf_token %}
-        <button class="btn" type="submit">Sign out</button>
-      </form>
-    </div>
-  </section>
+{% extends 'base.html' %}
+{% block title %}Dashboard | MaziwaShield{% endblock %}
+{% block content %}
+<main class="min-h-screen bg-base-200 p-4 sm:p-8">
+  <div class="mx-auto max-w-6xl space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <div><p class="text-sm text-base-content/60">MaziwaShield</p><h1 class="text-3xl font-bold">Farm dashboard</h1><p>Welcome, {{ user.username }}!</p></div>
+      <nav class="flex flex-wrap gap-2"><a class="btn" href="{% url 'core:farm_create' %}">Add farm</a><a class="btn" href="{% url 'core:alerts' %}">Alerts ({{ active_alerts|length }})</a><form action="{% url 'accounts:logout' %}" method="post">{% csrf_token %}<button class="btn" type="submit">Sign out</button></form></nav>
+    </header>
+    <section class="grid gap-4 sm:grid-cols-3" aria-label="Farm summary">
+      <article class="card bg-base-100 shadow"><div class="card-body"><h2 class="text-sm">Farms</h2><p class="text-3xl font-bold">{{ farm_count }}</p></div></article>
+      <article class="card bg-base-100 shadow"><div class="card-body"><h2 class="text-sm">Active alerts</h2><p class="text-3xl font-bold">{{ active_alerts|length }}</p></div></article>
+      <article class="card bg-base-100 shadow"><div class="card-body"><h2 class="text-sm">Weather</h2><p>Forecasts are refreshed by the scheduled weather service.</p></div></article>
+    </section>
+    <section><div class="mb-3 flex items-center justify-between"><h2 class="text-2xl font-semibold">Your farms</h2><a class="link" href="{% url 'core:farm_list' %}">View all farms</a></div>
+      {% if farm_summaries %}<div class="grid gap-4 lg:grid-cols-2">
+      {% for row in farm_summaries %}<article class="card bg-base-100 shadow"><div class="card-body">
+        <div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="card-title">{{ row.farm.name }}</h3><p>{{ row.farm.location }}</p></div><span class="badge {% if row.risk.risk_level == 'HIGH' %}badge-error{% elif row.risk.risk_level == 'MEDIUM' %}badge-warning{% elif row.risk.risk_level == 'LOW' %}badge-success{% else %}badge-ghost{% endif %}">{{ row.risk.risk_level }}</span></div>
+        <p>{{ row.risk.explanation }}</p>
+        {% if row.inventory %}<div class="overflow-x-auto"><table class="table table-sm"><thead><tr><th>Feed</th><th>Usable kg</th><th>Daily use kg</th><th>Coverage</th></tr></thead><tbody>{% for item in row.inventory %}<tr><th>{{ item.feed_type.name }}</th><td>{{ item.usable_stock_kg|floatformat:2 }}</td><td>{{ item.daily_consumption_kg|floatformat:2 }}</td><td>{% if item.coverage_days is not None %}{{ item.coverage_days|floatformat:1 }} days{% else %}Unknown{% endif %}</td></tr>{% endfor %}</tbody></table></div>{% else %}<div role="alert" class="alert alert-info">No inventory is recorded for this farm.</div>{% endif %}
+        <p>Weather: {{ row.risk.weather.status|title }}{% if not row.farm.latitude %} · coordinates missing{% endif %}. Forecast is context only; it does not change risk.</p>
+        <div class="card-actions"><a class="btn" href="{% url 'core:farm_detail' row.farm.id %}">Farm details</a><a class="btn" href="{% url 'core:inventory_list' row.farm.id %}">Inventory</a><a class="btn" href="{% url 'weather:farm_forecast' row.farm.id %}">Weather</a></div>
+      </div></article>{% endfor %}</div>{% else %}<div class="card bg-base-100"><div class="card-body"><h3 class="card-title">No farms yet</h3><p>Add a farm to start recording feed inventory and coverage.</p><a class="btn w-fit" href="{% url 'core:farm_create' %}">Add your first farm</a></div></div>{% endif %}
+    </section>
+    <section><h2 class="mb-3 text-2xl font-semibold">Active alerts</h2>{% if active_alerts %}<ul class="grid gap-3 sm:grid-cols-2">{% for alert in active_alerts %}<li class="card bg-base-100 shadow"><div class="card-body"><div class="flex justify-between"><h3 class="card-title">{{ alert.farm.name }}</h3><span class="badge badge-warning">{{ alert.get_risk_level_display }}</span></div><p>{{ alert.message }}</p><a class="link" href="{% url 'core:alert_detail' alert.id %}">View evidence and actions</a></div></li>{% endfor %}</ul>{% else %}<p class="rounded-box bg-base-100 p-4">No active alerts.</p>{% endif %}</section>
+  </div>
 </main>
 {% endblock %}
