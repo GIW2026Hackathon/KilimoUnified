@@ -1,0 +1,13 @@
+{% extends 'base.html' %} {% block content %}
+<main class="min-h-screen grid place-items-center bg-base-200 p-6">
+  <section class="card w-full max-w-lg bg-base-100 shadow-xl">
+    <div class="card-body items-center text-center">
+      <h1 class="card-title text-3xl">Welcome to Kilimo</h1>
+      <p>Sign in to continue to your dashboard.</p>
+      <div class="card-actions mt-4">
+        <a class="btn btn-primary" href="{% url 'accounts:login' %}">Sign in</a>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

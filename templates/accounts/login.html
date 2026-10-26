@@ -1,0 +1,32 @@
+{% extends "base.html" %} {% block title %}Sign in | Kilimo{% endblock %}
+{%block content %}
+<main class="min-h-screen grid place-items-center bg-base-200 p-6">
+  <section class="card w-full max-w-md bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h1 class="card-title text-2xl">Sign in</h1>
+      <p class="text-base-content/70">Enter your username and password.</p>
+      <form method="post" class="mt-4 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}" />
+        {% if form.non_field_errors %}
+        <div class="alert alert-error" role="alert">
+          <div>{{ form.non_field_errors }}</div>
+        </div>
+        {% endif %}
+        <div class="form-control w-full">
+          {{ form.username.label_tag }} {{ form.username }} {{
+          form.username.errors }}
+        </div>
+        <div class="form-control w-full">
+          {{ form.password.label_tag }} {{ form.password }} {{
+          form.password.errors }}
+        </div>
+        <button class="btn btn-primary w-full" type="submit">Sign in</button>
+      </form>
+      <a class="link link-hover mt-2 text-center" href="{% url 'core:home' %}"
+        >Back to home</a
+      >
+    </div>
+  </section>
+</main>
+{% endblock %}
