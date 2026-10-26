@@ -139,7 +139,7 @@ class FeedInventory(models.Model):
     @property
     def coverage_days(self):
         """Return estimated coverage, or None if consumption is zero."""
-        if self.daily_consumption_kg <= 0:
+        if self.daily_consumption_kg is None or self.daily_consumption_kg <= 0:
             return None
 
         return self.usable_stock_kg / self.daily_consumption_kg
