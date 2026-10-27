@@ -426,7 +426,7 @@ class WeatherForecastServiceTests(TestCase):
         self.assertContains(response, "add both latitude and longitude")
         self.assertContains(response, "Open-Meteo")
         self.assertContains(response, 'data-farm-assistant')
-        self.assertContains(response, "Explain this stored forecast")
+        self.assertContains(response, "What do these forecast measurements mean?")
 
         self.client.force_login(self.other_user)
         denied = self.client.get(reverse("weather:farm_forecast", args=[self.farm.pk]))

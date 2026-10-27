@@ -31,6 +31,8 @@ class FarmAssistantTests(TestCase):
 		self.assertEqual(page.status_code, 200)
 		self.assertTemplateUsed(page, "assistantAnalytics/assistant.html")
 		self.assertContains(page, "Farm assistant")
+		self.assertContains(page, 'data-assistant-question="How many days will my recorded feed last?"')
+		self.assertContains(page, 'data-assistant-question="What is my current feed shortage risk?"')
 		response = self.client.post(reverse("assistantAnalytics:ask"), {
 			"farm": self.farm.pk, "question": "How much usable stock do I have?",
 		})

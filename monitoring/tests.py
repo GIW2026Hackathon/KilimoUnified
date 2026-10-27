@@ -166,7 +166,7 @@ class RiskAlertTests(TestCase):
 		self.assertEqual(detail.status_code, 200)
 		self.assertTemplateUsed(detail, "monitoring/alert_detail.html")
 		self.assertContains(detail, 'data-farm-assistant')
-		self.assertContains(detail, "Explain why this alert was raised")
+		self.assertContains(detail, "Why was this alert raised?")
 
 	@patch("monitoring.services.explanations.explain_evaluation", return_value={
 		"source": "RULES", "status": "AUTHORIZATION_ERROR", "http_status": 403,

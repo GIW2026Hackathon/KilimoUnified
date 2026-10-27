@@ -4,12 +4,20 @@
       <h2 class="card-title">Ask the farm assistant</h2>
       <p class="text-sm text-base-content/70">Get an answer grounded in this farm’s recorded inventory, risk, alerts, and stored forecast. Missing information will be identified clearly.</p>
     </div>
+    <div class="space-y-2" aria-label="Sample questions">
+      <p class="text-sm font-semibold">Tap a question to fill the box, or type your own:</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-sm btn-outline" type="button" data-assistant-question="{{ question_one }}">{{ question_one }}</button>
+        <button class="btn btn-sm btn-outline" type="button" data-assistant-question="{{ question_two }}">{{ question_two }}</button>
+        {% if starter_question %}<button class="btn btn-sm btn-outline" type="button" data-assistant-question="{{ starter_question }}">{{ starter_question }}</button>{% endif %}
+      </div>
+    </div>
     <form method="post" action="{% url 'assistantAnalytics:ask' %}" class="space-y-3">
       {% csrf_token %}
       <input type="hidden" name="farm" value="{{ farm.pk }}">
       <label class="form-control w-full">
         <span class="label-text mb-2">Your question</span>
-        <textarea class="textarea textarea-bordered min-h-24 w-full" name="question" rows="3" maxlength="1000" required placeholder="{{ starter_question }}"></textarea>
+        <textarea class="textarea textarea-bordered min-h-24 w-full" name="question" rows="3" maxlength="1000" required placeholder="Choose a sample question above or type your own."></textarea>
       </label>
       <div class="flex flex-wrap items-center gap-3">
         <button class="btn btn-primary" type="submit">Ask about {{ farm.name }}</button>

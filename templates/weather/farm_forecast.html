@@ -72,7 +72,7 @@
       {% endif %}
 
       <div class="mt-6">
-        {% include "assistantAnalytics/_farm_question_prompt.html" with starter_question="Explain this stored forecast and tell me what it does and does not indicate about feed availability." %}
+        {% include "assistantAnalytics/_farm_question_prompt.html" with farm=farm question_one="What do these forecast measurements mean?" question_two="Does this forecast prove a feed shortage?" starter_question="How should I read the stored forecast for my farm?" %}
       </div>
 
       <p class="mt-4 text-sm text-base-content/70">

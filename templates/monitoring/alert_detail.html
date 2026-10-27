@@ -64,7 +64,7 @@
       {% endif %}
 
       {% with farm=alert.farm %}
-      {% include 'assistantAnalytics/_farm_question_prompt.html' with starter_question='Explain why this alert was raised using its recorded evidence.' %}
+      {% include 'assistantAnalytics/_farm_question_prompt.html' with farm=farm question_one='Why was this alert raised?' question_two='What recorded feed information should I check first?' starter_question='Explain this alert using its recorded evidence.' %}
       {% endwith %}
 
       <div class="flex flex-wrap gap-2">
