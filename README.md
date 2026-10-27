@@ -57,14 +57,61 @@ Run the weather tests with `python manage.py test weather` and the full project 
 
 ## Run and configure the application
 
-Use the project's Django 6.1 environment (the existing migrations use Django 6.1 constraint syntax). Install the pinned dependency with `pipenv install` (or install `Django==6.1.2` in your virtual environment). Set `DJANGO_SECRET_KEY` to a long random value in deployed environments; the development fallback is generated per process and invalidates sessions when the process restarts. Then run:
+The project has two parts that run as separate development servers: a Django backend and a Next.js frontend. Use Python 3.13 as specified in `Pipfile` and Node.js/npm for the frontend. The Python dependencies are Django 6.1.2 and `django-cors-headers` 4.9.0; the frontend dependencies are declared in `maziwashield-frontend/package.json` and locked in `maziwashield-frontend/package-lock.json`.
+
+### 1. Install backend dependencies
+
+From the project root, create a virtual environment and install the pinned packages:
 
 ```sh
-python manage.py migrate
-python manage.py runserver
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install "Django==6.1.2" "django-cors-headers==4.9.0"
 ```
 
-Authentication remains in the existing `accounts` app. Sign in, then use the dashboard to add farms and view farm, inventory, weather, and alert summaries. Farm county is entered directly. The optional **Use current location** control asks the browser for permission and fills latitude/longitude; it requires HTTPS (or localhost) and does not infer a county. Coordinates may also be entered manually and must be supplied together. Inventory rows are currently maintained through the existing Django admin and inventory service operations.
+Alternatively, if you use Pipenv, install it and the packages declared in `Pipfile`:
+
+```sh
+python3.13 -m pip install --user pipenv
+pipenv install
+```
+
+If you chose Pipenv, do not run `source .venv/bin/activate`; prefix each backend command below with `pipenv run` instead (for example, `pipenv run python manage.py migrate` and `pipenv run python manage.py runserver 0.0.0.0:8000`). The repo does not currently include a `Pipfile.lock`; the versions in `Pipfile` are pinned.
+
+### 2. Configure and start Django
+
+In the project root, make a local environment file and apply the database migrations:
+
+```sh
+cp .env.example .env
+# For the virtualenv setup, edit .env and set DJANGO_SECRET_KEY to a long random value.
+source .venv/bin/activate
+python manage.py migrate
+python manage.py check
+python manage.py runserver 0.0.0.0:8000
+```
+
+Keep this terminal running. The backend API will be available at `http://localhost:8000`. For local development, the default `FRONTEND_ORIGIN` is `http://localhost:3000`. Do not commit `.env` or use the development secret in production. AI provider credentials are optional: without them, deterministic farm-assistant answers still work.
+
+### 3. Install and start the Next.js frontend
+
+In a second terminal, from the project root:
+
+```sh
+cd maziwashield-frontend
+npm ci
+cp .env.local.example .env.local
+npm run dev
+```
+
+The example frontend environment sets `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`, which should match the Django server above. Open `http://localhost:3000`, register or sign in, and use the dashboard, farm pages, or Farm assistant. Stop either server with Ctrl+C in its terminal.
+
+### Production build and checks
+
+From `maziwashield-frontend/`, run `npm run lint`, `npm run typecheck`, and `npm run build`. To serve the built frontend locally, use `npm run start` after the build. From the project root, run `python manage.py check`, `python manage.py makemigrations --check`, and `python manage.py test` to verify Django. Do not expose Django's development server directly to the internet for production.
+
+Authentication remains in the existing `accounts` app. Farm county is entered directly. The optional **Use current location** control asks the browser for permission and fills latitude/longitude; it requires HTTPS (or localhost) and does not infer a county. Coordinates may also be entered manually and must be supplied together. Inventory rows are currently maintained through the existing Django admin and inventory service operations.
 
 ### Create local demo data
 
