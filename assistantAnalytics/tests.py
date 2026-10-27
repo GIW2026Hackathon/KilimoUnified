@@ -146,12 +146,40 @@ class FarmAssistantTests(TestCase):
 		"MAZIWASHIELD_AI_API_URL": "https://provider.invalid/chat/completions",
 		"MAZIWASHIELD_AI_MODEL": "test-model",
 	})
-	def test_weather_question_uses_stored_forecast_without_ai_claims(self):
-		with patch("assistantAnalytics.services.farm_assistant.urlopen") as provider:
-			result = answer_farm_question(self.farm, "What does the weather forecast say?")
-		provider.assert_not_called()
-		self.assertEqual(result["ai_status"], "NOT_APPLICABLE")
+	def test_weather_question_can_use_ai_for_grounded_explanation(self):
+		provider = patch("assistantAnalytics.services.farm_assistant.urlopen").start()
+		self.addCleanup(patch.stopall)
+		provider.return_value.__enter__.return_value.read.return_value = json.dumps({
+			"choices": [{"message": {"content": "The stored forecast provides rainfall and temperature indicators; treat them as context, not proof of field conditions."}}]
+		}).encode()
+
+		result = answer_farm_question(self.farm, "What does the weather forecast say?")
+
+		self.assertEqual(result["topic"], "weather")
+		self.assertEqual(result["ai_status"], "AI")
 		self.assertIn("No usable dated forecast indicators", result["answer"])
+		self.assertIn("rainfall and temperature", result["ai_explanation"])
+		payload = json.loads(provider.call_args.args[0].data.decode())
+		context = payload["messages"][1]["content"]
+		self.assertIn("weather_context_note", context)
+		self.assertNotIn("Private Farm", context)
+
+	@patch.dict("os.environ", {
+		"MAZIWASHIELD_AI_API_KEY": "test-key",
+		"MAZIWASHIELD_AI_API_URL": "https://provider.invalid/chat/completions",
+		"MAZIWASHIELD_AI_MODEL": "test-model",
+	})
+	def test_weather_ai_rejects_unsupported_advice(self):
+		provider = patch("assistantAnalytics.services.farm_assistant.urlopen").start()
+		self.addCleanup(patch.stopall)
+		provider.return_value.__enter__.return_value.read.return_value = json.dumps({
+			"choices": [{"message": {"content": "The weather is safe for planting and will be dry soon."}}]
+		}).encode()
+
+		result = answer_farm_question(self.farm, "Explain my stored weather forecast")
+
+		self.assertEqual(result["ai_status"], "INVALID_RESPONSE")
+		self.assertIsNone(result["ai_explanation"])
 
 	@skipUnless(os.environ.get("MAZIWASHIELD_RUN_AI_SIMULATION_TEST"), "opt-in local provider simulation")
 	def test_provider_adapter_against_local_postman_simulation(self):
