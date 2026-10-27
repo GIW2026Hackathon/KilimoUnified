@@ -4,13 +4,8 @@ const PHONE = /^(?:\+?254|0)?[17]\d{8}$/;
 const isPhone = (v) => PHONE.test(v.replace(/\s/g, ""));
 
 export const loginSchema = z.object({
-  identifier: z
-    .string()
-    .trim()
-    .min(1, "Enter your email or M-Pesa phone number")
-    .refine((v) => isPhone(v) || z.string().email().safeParse(v).success, "Enter a valid email or Kenyan phone number"),
-  password: z.string().min(1, "Enter your password or cooperative PIN"),
-  remember: z.boolean().optional(),
+  username: z.string().trim().min(1, "Enter your username"),
+  password: z.string().min(1, "Enter your password"),
 });
 
 const credentialsShape = z.object({
@@ -33,8 +28,10 @@ const farmShape = z.object({
     .int("Use a whole number")
     .min(1, "At least 1 animal")
     .max(5000, "That looks too large"),
-  feedTypes: z.array(z.string()),
-  terms: z.literal(true, { errorMap: () => ({ message: "Accept the terms to continue" }) }),
+  averageDailyMilkLitres: z.number({ invalid_type_error: "Enter daily milk production in litres" }).positive("Enter a value greater than zero"),
+  milkPricePerLitreKes: z.number({ invalid_type_error: "Enter the milk price in KES per litre" }).min(0, "Use zero or a positive amount"),
+  latitude: z.preprocess((value) => (value === "" ? "" : Number(value)), z.union([z.literal(""), z.number().min(-90).max(90)])),
+  longitude: z.preprocess((value) => (value === "" ? "" : Number(value)), z.union([z.literal(""), z.number().min(-180).max(180)])),
 });
 
 const matchPasswords = (v, ctx) => {
@@ -45,7 +42,12 @@ const matchPasswords = (v, ctx) => {
 
 /* Step 1 validates only the credentials; step 2 validates everything */
 export const credentialsSchema = credentialsShape.superRefine(matchPasswords);
-export const registerSchema = credentialsShape.merge(farmShape).superRefine(matchPasswords);
+export const registerSchema = credentialsShape.merge(farmShape).superRefine((values, ctx) => {
+  matchPasswords(values, ctx);
+  if ((values.latitude === "") !== (values.longitude === "")) {
+    ctx.addIssue({ code: "custom", path: ["latitude"], message: "Enter both coordinates or leave both blank" });
+  }
+});
 export const CREDENTIAL_FIELDS = ["fullName", "phone", "email", "password", "confirmPassword"];
 
 export const COUNTIES = [
@@ -56,5 +58,3 @@ export const COUNTIES = [
   { value: "Nyeri", label: "Nyeri (Tetu/Mathira)" },
   { value: "Nyandarua", label: "Nyandarua (Ol Kalou)" },
 ];
-
-export const FEED_TYPES = ["Napier Grass", "Boma Rhodes Hay", "Maize Silage", "Dairy Meal (16% CP)", "Cottonseed Cake", "Mineral Licks"];

@@ -64,6 +64,44 @@
 }
 
 @layer components {
+  .page-enter > * {
+    animation: page-rise-in 420ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+  }
+
+  .page-enter > *:nth-child(2) {
+    animation-delay: 45ms;
+  }
+  .page-enter > *:nth-child(3) {
+    animation-delay: 90ms;
+  }
+  .page-enter > *:nth-child(4) {
+    animation-delay: 135ms;
+  }
+
+  .interactive-card {
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .interactive-card:hover {
+    transform: translateY(-3px);
+    border-color: theme("colors.lineStrong");
+    box-shadow: 0 12px 28px -12px rgba(12, 92, 53, 0.22);
+  }
+
+  @keyframes page-rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* From Stitch <style> blocks (colors resolved from theme tokens) */
   .dotted-lime-border {
     border: 3px dashed theme("colors.lime.DEFAULT");

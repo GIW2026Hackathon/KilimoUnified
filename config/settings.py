@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     
     'accounts',
     'core',
@@ -82,6 +83,7 @@ AUTH_USER_MODEL = 'accounts.User'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -156,6 +158,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").rstrip("/")
+CORS_ALLOWED_ORIGINS = [FRONTEND_ORIGIN]
+CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r"^/api/.*$"
+CSRF_TRUSTED_ORIGINS = [FRONTEND_ORIGIN]
+SESSION_COOKIE_SAMESITE = os.environ.get("SESSION_COOKIE_SAMESITE", "Lax")
+SESSION_COOKIE_SECURE = os.environ.get("SESSION_COOKIE_SECURE", "false").lower() == "true"
+CSRF_COOKIE_SAMESITE = os.environ.get("CSRF_COOKIE_SAMESITE", SESSION_COOKIE_SAMESITE)
+CSRF_COOKIE_SECURE = os.environ.get("CSRF_COOKIE_SECURE", str(SESSION_COOKIE_SECURE)).lower() == "true"
 
 # Open-Meteo forecast policy (daily dates are interpreted in this timezone).
 WEATHER_FORECAST_DAYS = int(os.environ.get("WEATHER_FORECAST_DAYS", "7"))

@@ -5,9 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Building2, Eye, EyeOff, Grid3x3, Lock, MapPin, Mail, PawPrint, Sprout, User, UserRound, Wheat } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Eye, EyeOff, Grid3x3, Lock, MapPin, Mail, PawPrint, Sprout, User, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COUNTIES, CREDENTIAL_FIELDS, FEED_TYPES, credentialsSchema, registerSchema } from "@/features/auth/schemas";
+import { COUNTIES, CREDENTIAL_FIELDS, credentialsSchema, registerSchema } from "@/features/auth/schemas";
 import { useRegister } from "@/features/auth/hooks";
 import RegisterSuccess from "@/features/auth/components/register-success";
 import Input from "@/components/ui/input";
@@ -50,6 +50,8 @@ export default function RegisterForm() {
     handleSubmit,
     trigger,
     watch,
+    setError,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: (values, ctx, opts) => (step === 1 ? step1Resolver : fullResolver)(values, ctx, opts),
@@ -63,15 +65,16 @@ export default function RegisterForm() {
       farmName: "",
       county: "Kiambu",
       herdSize: undefined,
-      feedTypes: ["Napier Grass", "Boma Rhodes Hay", "Maize Silage", "Dairy Meal (16% CP)"],
-      terms: false,
+      averageDailyMilkLitres: undefined,
+      milkPricePerLitreKes: undefined,
+      latitude: "",
+      longitude: "",
     },
   });
 
   const password = watch("password") ?? "";
   const score = password ? Math.max(1, scorePassword(password)) : 0;
   const herd = Number(watch("herdSize")) || 0;
-  const selectedFeeds = watch("feedTypes") ?? [];
 
   async function next() {
     if (await trigger(CREDENTIAL_FIELDS)) setStep(2);
@@ -80,10 +83,32 @@ export default function RegisterForm() {
   function onSubmit(values) {
     mutation.mutate(values, {
       onSuccess: (res) => {
-        setCreated(res);
+        setCreated({
+          name: res.user.name,
+          phone: res.user.phone || values.phone,
+          farmName: res.farm.name,
+          county: res.farm.county,
+          herdSize: res.farm.herdSize,
+        });
         setOpen(true);
       },
+      onError: (error) => {
+        Object.entries(error.fields || {}).forEach(([field, message]) => {
+          setError(field, { type: "server", message });
+        });
+      },
     });
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setValue("latitude", coords.latitude.toFixed(6), { shouldValidate: true });
+        setValue("longitude", coords.longitude.toFixed(6), { shouldValidate: true });
+      },
+      () => setError("latitude", { type: "location", message: "Location could not be read. Enter coordinates manually." })
+    );
   }
 
   return (
@@ -215,7 +240,7 @@ export default function RegisterForm() {
                     <label htmlFor="herdSize" className="block font-title-md text-xs text-primary">
                       Herd Size (Lactating Cows + In-calf Heifers) <span className="text-error">*</span>
                     </label>
-                    <span className="shrink-0 font-title-md text-[11px] text-brand">Daily Intake: ~{herd * 15} kg DM</span>
+                    <span className="shrink-0 font-title-md text-[11px] text-brand">Recorded herd: {herd || "—"}</span>
                   </div>
                   <Input
                     id="herdSize"
@@ -231,44 +256,56 @@ export default function RegisterForm() {
                   />
                 </div>
 
-                <fieldset className="sm:col-span-2">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <legend className="font-title-md text-xs text-primary">Primary Feed Types in Use</legend>
-                    <span className="text-[11px] text-outline">Click to select active rations</span>
+                <Input
+                  label="Average daily milk production (litres)"
+                  required
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="e.g. 120"
+                  error={errors.averageDailyMilkLitres?.message}
+                  {...register("averageDailyMilkLitres", { valueAsNumber: true })}
+                />
+                <Input
+                  label="Milk price (KES per litre)"
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  placeholder="e.g. 55"
+                  error={errors.milkPricePerLitreKes?.message}
+                  {...register("milkPricePerLitreKes", { valueAsNumber: true })}
+                />
+
+                <div className="sm:col-span-2 rounded-xl border border-line bg-white p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-title-md text-sm text-primary">Farm coordinates for local weather</p>
+                      <p className="mt-1 text-xs text-on-surface-variant">Optional now; forecasts remain unavailable until both are provided.</p>
+                    </div>
+                    <button type="button" onClick={useCurrentLocation} className="min-h-11 rounded-lg border border-lineStrong px-3 py-2 text-xs font-semibold text-forest hover:bg-mint1">
+                      Use current location
+                    </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {FEED_TYPES.map((feed) => {
-                      const on = selectedFeeds.includes(feed);
-                      return (
-                        <label
-                          key={feed}
-                          className={cn(
-                            "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 font-title-md text-xs transition-colors md:min-h-0",
-                            on ? "border-brand bg-mint1 text-forest hover:bg-secondary-container/30" : "border-line bg-white text-on-surface-variant hover:bg-card"
-                          )}
-                        >
-                          <input type="checkbox" value={feed} className={cn("h-3.5 w-3.5 rounded text-brand focus:ring-0", on ? "border-brand" : "border-outline-variant")} {...register("feedTypes")} />
-                          <span>{feed}</span>
-                        </label>
-                      );
-                    })}
+                  <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Input label="Latitude" type="number" min="-90" max="90" step="0.000001" error={errors.latitude?.message} {...register("latitude")} />
+                    <Input label="Longitude" type="number" min="-180" max="180" step="0.000001" error={errors.longitude?.message} {...register("longitude")} />
                   </div>
-                </fieldset>
+                </div>
+
+                <p className="sm:col-span-2 text-sm text-on-surface-variant">
+                  Feed quantities, period requirements, and prices are entered for each estimate on your dashboard.
+                </p>
               </div>
 
-              <div className="pt-4">
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white p-3.5 transition-colors hover:border-brand">
-                  <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-lineStrong text-brand focus:ring-brand" {...register("terms")} />
-                  <span className="text-xs leading-relaxed text-on-surface">
-                    I agree to the <strong className="font-title-md text-primary">MaziwaShield Cooperative Feed Escrow Terms</strong> &amp; Kenya Dairy Board Data Sharing for feed allocation verification and seasonal buffer releases.
-                  </span>
-                </label>
-                {errors.terms && (
-                  <p role="alert" className="mt-1 text-xs text-error">
-                    {errors.terms.message}
-                  </p>
-                )}
-              </div>
+              {mutation.isError && !Object.keys(mutation.error?.fields || {}).length && (
+                <p role="alert" className="mt-4 rounded-lg border border-error/40 bg-error/5 p-3 text-sm text-error">
+                  {mutation.error.message}
+                </p>
+              )}
+
             </div>
           )}
 

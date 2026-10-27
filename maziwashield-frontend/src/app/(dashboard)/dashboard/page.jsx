@@ -1,150 +1,175 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Hourglass, Sprout, TriangleAlert, Truck } from "lucide-react";
-import StatCard from "@/components/ui/stat-card";
-import Badge from "@/components/ui/badge";
-import Button from "@/components/ui/button";
-import Progress from "@/components/ui/progress";
-import Tabs, { TabPanel } from "@/components/ui/tabs";
-import DataTable from "@/components/ui/table";
-import Pagination from "@/components/ui/pagination";
-import Modal from "@/components/ui/modal";
+import Link from "next/link";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CloudSun, Sprout, Wallet } from "lucide-react";
+import { getFarms, refreshWeather, submitAssessment } from "@/lib/api";
 import Input from "@/components/ui/input";
-import Select from "@/components/ui/select";
+import Button from "@/components/ui/button";
 import Skeleton from "@/components/ui/skeleton";
-import Tooltip from "@/components/ui/tooltip";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/toast";
-import { useShellAction } from "@/components/layout/shell-context";
 
-const ROWS = [
-  { id: "MS-8842", feed: "Boma Rhodes Hay (80 Bales)", total: 22400, status: "Escrow Secured", tone: "warning" },
-  { id: "MS-8819", feed: "Dairy Meal 16% CP (20 Bags)", total: 52000, status: "Dispatching", tone: "info" },
-  { id: "MS-8790", feed: "Silage Bunker Lot #2 (4 Tons)", total: 36000, status: "Delivered", tone: "mint" },
-];
+const emptyInputs = {
+  availableFeedKg: "",
+  requiredFeedKg: "",
+  feedPricePerKgKes: "",
+  productionReductionPercent: "",
+  periodDays: "7",
+};
 
-export default function DashboardPreview() {
-  const { toast } = useToast();
-  const [tab, setTab] = useState("a");
-  const [open, setOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState({ key: "total", dir: "desc" });
+function money(value) {
+  return `KES ${Number(value).toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
-  useShellAction("quick-action", () => setOpen(true));
-
-  const rows = useMemo(
-    () => [...ROWS].sort((a, b) => (sort.dir === "asc" ? 1 : -1) * (a[sort.key] > b[sort.key] ? 1 : -1)),
-    [sort]
+function ErrorPanel({ message, retry }) {
+  return (
+    <div role="alert" className="rounded-xl border border-error/30 bg-error/5 p-5 text-sm text-error">
+      <p>{message}</p>
+      {retry && <button type="button" onClick={retry} className="mt-3 min-h-11 font-semibold underline">Try again</button>}
+    </div>
   );
+}
 
-  const columns = [
-    { key: "id", label: "Order ID", card: "title", className: "font-mono font-bold text-primary" },
-    { key: "feed", label: "Feed", className: "font-title-md text-on-surface" },
-    { key: "total", label: "Total (KES)", sortable: true, render: (r) => r.total.toLocaleString("en-KE") },
-    { key: "status", label: "Status", render: (r) => <Badge tone={r.tone}>{r.status}</Badge> },
-    {
-      key: "action",
-      label: "Action",
-      align: "right",
-      card: "actions",
-      render: () => (
-        <Button variant="outline" size="sm" onClick={() => toast({ title: "Dispatch tracking opened" })}>
-          Track Dispatch
-        </Button>
-      ),
-    },
-  ];
+export default function DashboardPage() {
+  const [inputs, setInputs] = useState(emptyInputs);
+  const [localErrors, setLocalErrors] = useState({});
+  const queryClient = useQueryClient();
+  const farmsQuery = useQuery({ queryKey: ["farms"], queryFn: getFarms });
+  const assessmentMutation = useMutation({ mutationFn: ({ id, values }) => submitAssessment(id, values) });
+  const weatherMutation = useMutation({
+    mutationFn: refreshWeather,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["farms"] }),
+  });
+  const farm = farmsQuery.data?.[0];
+  const assessment = assessmentMutation.data;
+  const fieldErrors = assessmentMutation.error?.fields || {};
+
+  function change(event) {
+    setInputs((current) => ({ ...current, [event.target.name]: event.target.value }));
+    setLocalErrors((current) => ({ ...current, [event.target.name]: undefined }));
+    if (assessmentMutation.isError) assessmentMutation.reset();
+  }
+
+  function calculate(event) {
+    event.preventDefault();
+    if (!farm) return;
+    const missing = Object.fromEntries(["availableFeedKg", "requiredFeedKg", "feedPricePerKgKes", "productionReductionPercent"].filter((key) => inputs[key] === "").map((key) => [key, "This field is required."]));
+    setLocalErrors(missing);
+    if (Object.keys(missing).length) return;
+    assessmentMutation.mutate({
+      id: farm.id,
+      values: {
+        availableFeedKg: Number(inputs.availableFeedKg),
+        requiredFeedKg: Number(inputs.requiredFeedKg),
+        feedPricePerKgKes: Number(inputs.feedPricePerKgKes),
+        productionReductionPercent: Number(inputs.productionReductionPercent),
+        periodDays: Number(inputs.periodDays),
+      },
+    });
+  }
+
+  if (farmsQuery.isPending) {
+    return <div className="space-y-4" aria-label="Loading farm dashboard"><Skeleton className="h-10 w-64" /><Skeleton className="h-36 w-full" /><Skeleton className="h-72 w-full" /></div>;
+  }
+  if (farmsQuery.isError) {
+    return <ErrorPanel message={farmsQuery.error.message} retry={() => farmsQuery.refetch()} />;
+  }
+  if (!farm) {
+    return (
+      <div className="rounded-2xl border border-outline-variant/50 bg-surface-container-lowest p-8 text-center">
+        <h1 className="font-headline-lg text-headline-lg text-primary">Add your farm to begin</h1>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-on-surface-variant">Your account has no farm profile yet. Create one to see local weather status and calculate feed and financial estimates.</p>
+        <Link href="/register" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Create farm profile</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="font-headline-lg-mobile text-headline-lg-mobile text-primary md:text-headline-lg">Phase 2 preview</h1>
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wide text-outline">Farmer dashboard</p>
+        <h1 className="mt-1 font-headline-xl text-headline-xl-mobile font-bold text-primary md:text-headline-xl">{farm.name}</h1>
+        <p className="mt-1 text-sm text-on-surface-variant">{farm.location}{farm.county ? `, ${farm.county} County` : ""} · {farm.herdSize ?? "—"} cattle</p>
+      </div>
 
-      <section className="grid grid-cols-1 gap-space-md md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Feed Stock" value="12,480" unit="kg" icon={Sprout} tone="mint">
-          <p className="mt-1 text-xs font-medium text-secondary">+4.2% vs last week</p>
-        </StatCard>
-        <StatCard label="Feed Autonomy" value="18" unit="Days" icon={Hourglass} tone="amber">
-          <p className="mt-1 text-xs font-semibold text-amber-800">Buffer threshold: 21 days min</p>
-        </StatCard>
-        <StatCard label="Shortage Risk" icon={TriangleAlert} tone="orange">
-          <Badge tone="warning" size="md">Medium</Badge>
-        </StatCard>
-        <StatCard label="Pending Co-op Orders" value="3" unit="Orders" icon={Truck} tone="sky" />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Current farm status">
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-wide text-outline">Climate risk</p><p className="mt-2 text-2xl font-bold text-primary">{farm.climateRisk.level === "UNAVAILABLE" ? "Unavailable" : farm.climateRisk.level}</p></div>
+            <CloudSun className="h-6 w-6 text-secondary" aria-hidden />
+          </div>
+          <p className="mt-3 text-xs text-on-surface-variant">Forecast status: {farm.climateRisk.status.toLowerCase().replaceAll("_", " ")}. {farm.climateRisk.assumption}</p>
+          {farm.climateRisk.indicators.length > 0 && (
+            <ul className="mt-3 space-y-1 border-t border-outline-variant/40 pt-3 text-xs text-on-surface-variant">
+              {farm.climateRisk.indicators.slice(0, 3).map((day) => <li key={day.date}>{day.date}: {day.precipitationMm ?? "—"} mm precipitation; {day.temperatureMinC ?? "—"}–{day.temperatureMaxC ?? "—"} °C</li>)}
+            </ul>
+          )}
+          <button type="button" disabled={weatherMutation.isPending} onClick={() => weatherMutation.mutate(farm.id)} className="mt-3 min-h-11 rounded-lg border border-outline-variant px-3 py-2 text-xs font-semibold text-primary disabled:opacity-60">{weatherMutation.isPending ? "Refreshing weather…" : "Refresh weather"}</button>
+          {weatherMutation.data?.weatherRefresh.fallback && <p role="status" className="mt-2 text-xs text-amber-800">{weatherMutation.data.weatherRefresh.fallback}</p>}
+          {weatherMutation.isError && <p role="alert" className="mt-2 text-xs text-error">{weatherMutation.error.message}</p>}
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-wide text-outline">Recorded feed status</p><p className="mt-2 text-2xl font-bold text-primary">{farm.feedStatus}</p></div>
+            <Sprout className="h-6 w-6 text-secondary" aria-hidden />
+          </div>
+          <p className="mt-3 text-xs text-on-surface-variant">Based on existing inventory coverage rules. Risk thresholds are provisional; weather does not change this status.</p>
+          {farm.feedItems.length > 0 && <ul className="mt-3 space-y-1 border-t border-outline-variant/40 pt-3 text-xs text-on-surface-variant">{farm.feedItems.map((item) => <li key={item.feedType}>{item.feedType}: {item.usableStockKg} kg usable, {item.coverageDays ?? "unknown"} days coverage</li>)}</ul>}
+          {farm.feedItems.length === 0 && <p className="mt-3 text-xs text-on-surface-variant">No recorded inventory. Enter usable feed for the estimate below.</p>}
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs font-bold uppercase tracking-wide text-outline">Estimated financial impact</p><p className="mt-2 text-2xl font-bold text-primary">{assessment ? money(assessment.calculation.estimatedRevenueLossKes) : "Not calculated"}</p></div>
+            <Wallet className="h-6 w-6 text-secondary" aria-hidden />
+          </div>
+          <p className="mt-3 text-xs text-on-surface-variant">Potential revenue loss estimate for the entered period and production-reduction assumption. Not a guarantee.</p>
+          {assessment && <p className="mt-3 border-t border-outline-variant/40 pt-3 text-xs text-on-surface-variant">Additional feed cost estimate: <strong>{money(assessment.calculation.extraFeedCostKes)}</strong></p>}
+        </Card>
       </section>
 
-      <Card className="space-y-4 p-space-lg">
+      <Card className="p-5 md:p-6">
         <CardHeader>
-          <CardTitle>Primitives</CardTitle>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setOpen(true)}>Open modal</Button>
-            <Button variant="forest" onClick={() => toast({ title: "Saved", description: "Toast works." })}>Toast</Button>
-            <Button variant="brand" loading>Loading</Button>
-            <Tooltip label="Tooltip text">
-              <Button variant="outline">Hover or focus me</Button>
-            </Tooltip>
-          </div>
+          <CardTitle>Estimate feed deficit and financial impact</CardTitle>
+          <p className="mt-1 text-sm text-on-surface-variant">Enter quantities in kg of dry matter for the selected period. The milk production reduction is your scenario assumption.</p>
         </CardHeader>
-        <Progress value={72} tone="lime" label="Feed reserve" />
-        <Tabs
-          label="Preview tabs"
-          idPrefix="demo"
-          value={tab}
-          onChange={setTab}
-          variant="segmented"
-          items={[
-            { value: "a", label: "All" },
-            { value: "b", label: "Critical" },
-            { value: "c", label: "Co-op" },
-          ]}
-        />
-        <TabPanel value="a" active={tab} idPrefix="demo">Tab A panel</TabPanel>
-        <TabPanel value="b" active={tab} idPrefix="demo">Tab B panel</TabPanel>
-        <TabPanel value="c" active={tab} idPrefix="demo">Tab C panel</TabPanel>
-        <div className="flex gap-3">
-          <Skeleton className="h-10 w-40" />
-          <Skeleton className="h-10 w-24" />
-        </div>
-      </Card>
-
-      <Card className="overflow-hidden">
-        <DataTable
-          caption="Recent purchase orders"
-          columns={columns}
-          rows={rows}
-          getRowKey={(r) => r.id}
-          sort={sort}
-          onSort={(key) => setSort((s) => ({ key, dir: s.key === key && s.dir === "desc" ? "asc" : "desc" }))}
-        />
-        <Pagination page={page} pageCount={3} onPageChange={setPage} total={28} pageSize={10} onPageSizeChange={() => {}} noun="orders" />
-      </Card>
-
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Preview modal"
-        description="Full-screen sheet on mobile, centered dialog from sm"
-        icon={Sprout}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="brand" form="preview-form" type="submit">Save</Button>
-          </div>
-        }
-      >
-        <form
-          id="preview-form"
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setOpen(false);
-            toast({ title: "Saved" });
-          }}
-        >
-          <Input label="Farm name" required placeholder="Muguga Highland Shamba" />
-          <Select label="County" options={["Kiambu", "Nakuru", "Uasin Gishu"]} />
+        <form onSubmit={calculate} className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" noValidate>
+          <Input id="availableFeedKg" name="availableFeedKg" label="Usable feed available (kg dry matter)" type="number" min="0" step="0.01" required value={inputs.availableFeedKg} onChange={change} error={localErrors.availableFeedKg || fieldErrors.availableFeedKg} />
+          <Input id="requiredFeedKg" name="requiredFeedKg" label="Feed required (kg dry matter)" type="number" min="0.01" step="0.01" required value={inputs.requiredFeedKg} onChange={change} error={localErrors.requiredFeedKg || fieldErrors.requiredFeedKg} />
+          <Input id="periodDays" name="periodDays" label="Selected period (days)" type="number" min="1" max="365" step="1" required value={inputs.periodDays} onChange={change} error={fieldErrors.periodDays} />
+          <Input id="feedPricePerKgKes" name="feedPricePerKgKes" label="Feed price (KES per kg dry matter)" type="number" min="0" step="0.01" required value={inputs.feedPricePerKgKes} onChange={change} error={localErrors.feedPricePerKgKes || fieldErrors.feedPricePerKgKes} />
+          <Input id="productionReductionPercent" name="productionReductionPercent" label="Production reduction assumption (%)" type="number" min="0" max="100" step="0.1" required value={inputs.productionReductionPercent} onChange={change} error={localErrors.productionReductionPercent || fieldErrors.productionReductionPercent} />
+          {fieldErrors.averageDailyMilkLitres && <p role="alert" className="sm:col-span-2 text-sm text-error">{fieldErrors.averageDailyMilkLitres}</p>}
+          {fieldErrors.milkPricePerLitreKes && <p role="alert" className="sm:col-span-2 text-sm text-error">{fieldErrors.milkPricePerLitreKes}</p>}
+          {assessmentMutation.isError && !Object.keys(fieldErrors).length && <p role="alert" className="sm:col-span-2 text-sm text-error">{assessmentMutation.error.message}</p>}
+          <div className="flex items-end"><Button type="submit" variant="brand" loading={assessmentMutation.isPending} className="w-full">Calculate estimate</Button></div>
         </form>
-      </Modal>
+      </Card>
+
+      {assessment && (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2" aria-live="polite">
+          <Card className="p-5">
+            <h2 className="font-title-lg text-title-lg font-bold text-primary">Calculation results</h2>
+            <dl className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between gap-3"><dt>Feed deficit</dt><dd className="font-semibold">{assessment.calculation.feedDeficitKg} kg dry matter</dd></div>
+              <div className="flex justify-between gap-3"><dt>Additional feed cost estimate</dt><dd className="font-semibold">{money(assessment.calculation.extraFeedCostKes)}</dd></div>
+              <div className="flex justify-between gap-3"><dt>Baseline milk revenue estimate</dt><dd className="font-semibold">{money(assessment.calculation.baselineRevenueKes)}</dd></div>
+              <div className="flex justify-between gap-3"><dt>Scenario milk revenue estimate</dt><dd className="font-semibold">{money(assessment.calculation.scenarioRevenueKes)}</dd></div>
+              <div className="flex justify-between gap-3 border-t border-outline-variant/40 pt-3"><dt>Potential revenue loss estimate</dt><dd className="font-bold">{money(assessment.calculation.estimatedRevenueLossKes)}</dd></div>
+            </dl>
+          </Card>
+          <Card className="p-5">
+            <h2 className="font-title-lg text-title-lg font-bold text-primary">Recommended actions</h2>
+            <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-on-surface-variant">{assessment.recommendedActions.map((item) => <li key={item}>{item}</li>)}</ul>
+            <h3 className="mt-5 font-semibold text-primary">Assumptions</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-on-surface-variant">{assessment.financialAssumptions.map((item) => <li key={item}>{item}</li>)}</ul>
+          </Card>
+        </section>
+      )}
+      <Card className="p-5">
+        <h2 className="font-title-md text-title-md font-bold text-primary">Risk and estimate assumptions</h2>
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-on-surface-variant">{farm.assumptions.map((item) => <li key={item}>{item}</li>)}</ul>
+      </Card>
     </div>
   );
 }

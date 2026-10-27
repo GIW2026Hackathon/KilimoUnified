@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, Lock, ShieldCheck, X } from "lucide-react";
+import { ArrowRight, ShieldCheck, X } from "lucide-react";
 import { useDialog } from "@/hooks/use-dialog";
 import Button from "@/components/ui/button";
 
@@ -41,12 +41,12 @@ export default function RegisterSuccess({ open, data, onClose, onContinue }) {
         </div>
 
         <div className="space-y-1.5 text-center">
-          <span className="rounded-full bg-mint1 px-2.5 py-0.5 font-label-caps text-[11px] uppercase tracking-wider text-forest">Feed Escrow Certified</span>
+          <span className="rounded-full bg-mint1 px-2.5 py-0.5 font-label-caps text-[11px] uppercase tracking-wider text-forest">Farm profile created</span>
           <h2 id={titleId} className="font-headline-md text-headline-md text-primary">
             Your farm is ready!
           </h2>
           <p className="text-xs text-on-surface-variant">
-            Welcome {first}, {data.farmName} is now verified on the regional feed registry.
+            Welcome {first}, {data.farmName} is ready for climate and feed planning.
           </p>
         </div>
 
@@ -58,15 +58,12 @@ export default function RegisterSuccess({ open, data, onClose, onContinue }) {
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3 border-b border-line/60 pb-2">
-            <dt className="text-outline">Emergency Silage Buffer</dt>
-            <dd className="flex items-center gap-1 font-title-md text-brand">
-              <Lock className="h-3.5 w-3.5" aria-hidden />
-              Guaranteed 21-day reserve
-            </dd>
+            <dt className="text-outline">Farm location</dt>
+            <dd className="text-right font-title-md text-forest">{data.county}</dd>
           </div>
           <div className="flex items-center justify-between gap-3">
-            <dt className="text-outline">USSD Mobile Access</dt>
-            <dd className="text-right font-mono font-bold text-forest">*384*45# (PIN Sent to {phone.slice(0, 4)}...)</dd>
+            <dt className="text-outline">Contact number</dt>
+            <dd className="text-right font-mono font-bold text-forest">{phone}</dd>
           </div>
         </dl>
 

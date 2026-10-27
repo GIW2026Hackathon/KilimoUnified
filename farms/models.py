@@ -17,6 +17,21 @@ class Farm(models.Model):
     name = models.CharField(max_length=150)
     county = models.CharField(max_length=100, blank=True)
     location = models.CharField(max_length=255)
+    herd_size = models.PositiveIntegerField(null=True, blank=True)
+    average_daily_milk_litres = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
+    milk_price_per_litre_kes = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+    )
     latitude = models.DecimalField(
         max_digits=9,
         decimal_places=6,

@@ -1,192 +1,54 @@
+"use client";
+
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft, CloudSun, MapPin, ShieldCheck, Sprout, Truck } from "lucide-react";
-import { FARMS } from "@/features/farms/data";
-import { IMAGES } from "@/lib/images";
-import Photo from "@/components/shared/photo";
+import { useParams } from "next/navigation";
+import { ArrowLeft, CloudSun, MapPin, Sprout } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getFarm } from "@/lib/api";
+import Skeleton from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 
-const STATUS_STYLES = {
-  healthy: "border-green-200 bg-green-50 text-green-800",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
-  critical: "border-red-200 bg-red-50 text-red-800",
-};
+export default function FarmDetailsPage() {
+  const params = useParams();
+  const farmId = params?.farmId;
+  const farmQuery = useQuery({ queryKey: ["farm", farmId], queryFn: () => getFarm(farmId), enabled: Boolean(farmId) });
 
-export function generateStaticParams() {
-  return FARMS.map(({ slug }) => ({ farmId: slug }));
-}
-
-function Stat({ label, value, note, icon: Icon }) {
-  return (
-    <div className="rounded-xl border border-outline-variant/50 bg-surface-container-lowest p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-outline">{label}</p>
-          <p className="mt-2 font-headline-md text-headline-md font-bold text-primary">{value}</p>
-        </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-low text-primary">
-          <Icon className="h-5 w-5" aria-hidden />
-        </span>
-      </div>
-      {note && <p className="mt-4 border-t border-outline-variant/40 pt-3 text-xs text-on-surface-variant">{note}</p>}
-    </div>
-  );
-}
-
-export default function FarmDetailsPage({ params }) {
-  const farm = FARMS.find((item) => item.slug === params.farmId);
-  if (!farm) notFound();
-
-  const isMuguga = farm.slug === "muguga-highland-shamba";
-  const detailDays = isMuguga ? 18 : farm.days;
-  const detailStatus = isMuguga ? "warning" : farm.status;
-  const detailHerd = isMuguga ? "14 Cows" : farm.herd;
-  const detailIntake = isMuguga ? "210 kg/day DM" : farm.intake;
-  const detailReserve = isMuguga ? "12,480 kg" : `${farm.reserveTons} Tons`;
-  const detailThreshold = isMuguga ? "21 days required" : `${farm.minimumTons} Tons`;
-  const progress = Math.min((detailDays / 21) * 100, 100);
+  if (farmQuery.isPending) return <div className="space-y-4" aria-label="Loading farm"><Skeleton className="h-10 w-64" /><Skeleton className="h-48 w-full" /><Skeleton className="h-48 w-full" /></div>;
+  if (farmQuery.isError) return <div role="alert" className="rounded-xl border border-error/30 bg-error/5 p-6 text-sm text-error">{farmQuery.error.message}<button type="button" onClick={() => farmQuery.refetch()} className="ml-3 min-h-11 underline">Try again</button></div>;
+  const farm = farmQuery.data;
+  if (!farm) return <p className="rounded-xl border p-6 text-sm">Farm details are unavailable.</p>;
 
   return (
     <div className="space-y-6">
-      <Link href="/farms" className="inline-flex min-h-10 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-primary hover:bg-surface-container-low">
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to farms
-      </Link>
-
-      <section className="overflow-hidden rounded-2xl border border-outline-variant/50 bg-surface-container-lowest shadow-sm">
-        <div className="relative h-56 bg-surface-container md:h-72">
-          <Photo
-            src={farm.detailImage}
-            alt={isMuguga
-              ? "Lush Kenyan highland dairy farmland in Kiambu with grazing Friesian cows and a silage barn"
-              : farm.imageAlt}
-            sizes="(min-width: 768px) 90vw, 100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          <div className="absolute inset-x-5 bottom-5 flex flex-col gap-3 text-white md:inset-x-8 md:bottom-7">
-            <span className={`w-fit rounded-full border px-3 py-1 text-xs font-bold ${STATUS_STYLES[detailStatus]}`}>
-              {isMuguga ? "Safety Buffer" : farm.statusLabel} · {detailDays} days of feed
-            </span>
-            <h1 className="font-headline-xl text-headline-xl-mobile font-bold drop-shadow md:text-headline-xl">{farm.name}</h1>
-            <p className="flex items-center gap-2 text-sm text-white/90">
-              <MapPin className="h-4 w-4" aria-hidden />
-              {farm.location}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-outline-variant/50 px-5 py-4 md:px-8">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-outline">Cooperative hub</p>
-            <p className="mt-1 font-semibold text-primary">{isMuguga ? "Muguga Dairy Co-op Hub #42" : "Regional Dairy Co-op Hub"}</p>
-          </div>
-          <span className="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-3 py-1.5 text-xs font-semibold text-primary">
-            <span className="h-2 w-2 rounded-full bg-secondary" />
-            Farm registry active
-          </span>
-        </div>
+      <Link href="/farms" className="inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-semibold text-primary hover:bg-surface-container-low"><ArrowLeft className="h-4 w-4" aria-hidden />Back to farms</Link>
+      <section className="rounded-2xl border border-outline-variant/50 bg-surface-container-lowest p-5 shadow-sm md:p-8">
+        <p className="text-xs font-bold uppercase tracking-wide text-outline">Farm profile</p>
+        <h1 className="mt-2 font-headline-xl text-headline-xl-mobile font-bold text-primary md:text-headline-xl">{farm.name}</h1>
+        <p className="mt-2 flex items-center gap-2 text-sm text-on-surface-variant"><MapPin className="h-4 w-4" aria-hidden />{farm.location}{farm.county ? `, ${farm.county} County` : ""}</p>
+        <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-lg bg-surface-container-low p-4"><dt className="text-xs text-outline">Herd size</dt><dd className="mt-1 font-semibold text-primary">{farm.herdSize ?? "Not recorded"}</dd></div>
+          <div className="rounded-lg bg-surface-container-low p-4"><dt className="text-xs text-outline">Daily milk production</dt><dd className="mt-1 font-semibold text-primary">{farm.averageDailyMilkLitres ?? "Not recorded"} L/day</dd></div>
+          <div className="rounded-lg bg-surface-container-low p-4"><dt className="text-xs text-outline">Milk price</dt><dd className="mt-1 font-semibold text-primary">{farm.milkPricePerLitreKes ?? "Not recorded"} KES/L</dd></div>
+        </dl>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
-          label="Herd Classification"
-          value={detailHerd}
-          note={isMuguga ? "10 Lactating • 4 In-Calf" : detailIntake}
-          icon={Sprout}
-        />
-        <Stat
-          label="Total Secured Fodder"
-          value={detailReserve}
-          note={isMuguga ? "+4.2% this week" : `${detailDays} days of feed autonomy`}
-          icon={Sprout}
-        />
-        <Stat
-          label="Safety Buffer Index"
-          value={`${detailDays} / 21 Days`}
-          note={isMuguga ? "18 Days Total Runway" : `${farm.statusLabel} · ${detailIntake}`}
-          icon={ShieldCheck}
-        />
-        <Stat label="Farm Manager" value={farm.manager} note="USSD *384*45# active" icon={Truck} />
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Card className="p-5">
+          <div className="flex items-center gap-2"><CloudSun className="h-5 w-5 text-secondary" aria-hidden /><h2 className="font-title-lg text-title-lg font-bold text-primary">Climate information</h2></div>
+          <p className="mt-3 text-sm">Risk category: <strong>{farm.climateRisk.level}</strong></p>
+          <p className="mt-1 text-xs text-on-surface-variant">Forecast status: {farm.climateRisk.status.toLowerCase().replaceAll("_", " ")}. {farm.climateRisk.assumption}</p>
+          {farm.climateRisk.indicators.length ? (
+            <ul className="mt-4 divide-y divide-outline-variant/40 text-sm">{farm.climateRisk.indicators.map((day) => <li key={day.date} className="py-2"><strong>{day.date}</strong>: {day.precipitationMm ?? "—"} mm precipitation; {day.temperatureMinC ?? "—"}–{day.temperatureMaxC ?? "—"} °C</li>)}</ul>
+          ) : <p className="mt-4 rounded-lg bg-surface-container-low p-3 text-sm text-on-surface-variant">No usable dated forecast data is available. Check that coordinates are recorded and refresh weather data.</p>}
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center gap-2"><Sprout className="h-5 w-5 text-secondary" aria-hidden /><h2 className="font-title-lg text-title-lg font-bold text-primary">Recorded feed status</h2></div>
+          <p className="mt-3 text-2xl font-bold text-primary">{farm.feedStatus}</p>
+          {farm.feedItems.length ? <ul className="mt-4 divide-y divide-outline-variant/40 text-sm">{farm.feedItems.map((item) => <li key={item.feedType} className="flex justify-between gap-3 py-2"><span>{item.feedType}</span><span className="text-right">{item.usableStockKg} kg usable · {item.coverageDays ?? "unknown"} days</span></li>)}</ul> : <p className="mt-4 text-sm text-on-surface-variant">No inventory is recorded. Use the advisor dashboard to enter feed quantities for an estimate.</p>}
+          <Link href="/dashboard" className="mt-4 inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Open advisor dashboard</Link>
+        </Card>
       </section>
-
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-12">
-        <div className={`space-y-6 ${isMuguga ? "xl:col-span-8" : "xl:col-span-12"}`}>
-          <div className="rounded-2xl border border-outline-variant/50 bg-surface-container-lowest p-5 shadow-sm md:p-6">
-            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-outline">Feed security</p>
-                <h2 className="mt-1 font-title-lg text-title-lg font-bold text-primary">Feed Reserve Inventory vs Safety Threshold</h2>
-              </div>
-              <span className={`rounded-full border px-3 py-1 text-xs font-bold ${STATUS_STYLES[farm.status]}`}>
-                {farm.days} / 21 Days
-              </span>
-            </div>
-            <div
-              role="progressbar"
-              aria-label={`${farm.name} feed reserve runway`}
-              aria-valuemin={0}
-              aria-valuemax={21}
-              aria-valuenow={Math.min(detailDays, 21)}
-              className="h-3 overflow-hidden rounded-full bg-surface-container-high"
-            >
-              <div
-                className={`h-full rounded-full ${detailStatus === "critical" ? "bg-error" : detailStatus === "warning" ? "bg-amber-500" : "bg-secondary"}`}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <div className="mt-3 flex justify-between gap-3 text-xs text-on-surface-variant">
-              <span>Current reserve: {detailReserve}</span>
-              <span>Safety threshold: {detailThreshold}</span>
-            </div>
-          </div>
-        </div>
-
-        {isMuguga && (
-          <aside className="space-y-6 xl:col-span-4">
-              <div className="space-y-4 rounded-2xl border border-outline-variant/50 bg-surface-container-lowest p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-outline">Agro-ecological station</p>
-                    <h2 className="mt-1 font-title-lg text-title-lg font-bold text-primary">Muguga Agro-Zone</h2>
-                  </div>
-                  <CloudSun className="h-6 w-6 text-amber-600" aria-hidden />
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-outline-variant/40 bg-surface-container-low p-4">
-                  <div>
-                    <p className="font-headline-md text-headline-md font-bold text-primary">22°C</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">Partly cloudy · Humidity 65%</p>
-                  </div>
-                  <p className="text-right text-xs text-on-surface-variant">Wind<br /><strong className="text-on-surface">11 km/h SE</strong></p>
-                </div>
-                <p className="rounded-lg border-l-4 border-primary bg-surface-container-low p-4 text-sm leading-relaxed text-on-surface-variant">
-                  Dry spell conditions expected to persist for 12 days. Increase silage ration by 2.5 kg per lactating head to sustain milk production.
-                </p>
-              </div>
-
-              <div className="space-y-4 rounded-2xl border border-outline-variant/50 bg-surface-container-lowest p-5 shadow-sm">
-                <div className="flex items-center justify-between border-b border-outline-variant/40 pb-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-outline">Logistics &amp; sub-hub pin</p>
-                    <h2 className="mt-1 font-title-lg text-title-lg font-bold text-primary">GPS Dispatch Routing</h2>
-                  </div>
-                  <span className="rounded-full bg-secondary-container px-2.5 py-1 text-xs font-bold text-primary">1.8 km to Hub</span>
-                </div>
-                <div className="relative h-48 overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container">
-                  <Photo
-                    src={IMAGES.farmDetailMap}
-                    alt="Agricultural GIS map of Kikuyu, Kenya showing farm parcels and access roads"
-                    sizes="(min-width: 1280px) 25vw, 100vw"
-                  />
-                  <div className="absolute left-1/4 top-1/3 rounded bg-primary px-2 py-1 text-[10px] font-bold text-white shadow">
-                    Muguga Shamba
-                  </div>
-                  <div className="absolute bottom-3 right-3 rounded bg-surface-container-lowest/95 px-2 py-1 text-[10px] font-semibold text-primary shadow">
-                    Kiambu, Kenya
-                  </div>
-                </div>
-              </div>
-          </aside>
-        )}
-      </section>
+      <Card className="p-5"><h2 className="font-title-md text-title-md font-bold text-primary">Assumptions</h2><ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-on-surface-variant">{farm.assumptions.map((item) => <li key={item}>{item}</li>)}</ul></Card>
     </div>
   );
 }

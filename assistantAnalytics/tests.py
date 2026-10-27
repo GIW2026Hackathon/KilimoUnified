@@ -80,7 +80,24 @@ class FarmAssistantTests(TestCase):
 		self.assertIn("90.00", request_text)
 		self.assertIn("How much usable stock", request_text)
 		self.assertNotIn("Private Farm", request_text)
-		self.assertEqual(result["answer"], "Hay: 90.00 kg usable from 100.00 kg stock (10.00 kg unusable, 0.00 kg reserved); daily use 10.00 kg.")
+		self.assertEqual(
+			result["answer"],
+			"Hay: 90.00 kg usable from 100.00 kg stock (10.00 kg unusable, 0.00 kg reserved); "
+			"daily use 10.00 kg, estimated coverage 9 days, inventory risk MEDIUM.",
+		)
+
+	@patch.dict("os.environ", {"MAZIWASHIELD_AI_API_KEY": "", "MAZIWASHIELD_AI_API_URL": "", "MAZIWASHIELD_AI_MODEL": ""})
+	def test_inventory_and_coverage_answers_include_usable_stock_and_daily_use(self):
+		inventory = answer_farm_question(self.farm, "Show my feed inventory")
+		self.assertEqual(inventory["topic"], "inventory")
+		self.assertIn("90.00 kg usable", inventory["answer"])
+		self.assertIn("daily use 10.00 kg", inventory["answer"])
+		self.assertIn("9 days", inventory["answer"])
+		self.assertIn("inventory risk MEDIUM", inventory["answer"])
+
+		coverage = answer_farm_question(self.farm, "Which feed has the lowest coverage?")
+		self.assertEqual(coverage["topic"], "coverage")
+		self.assertIn("estimated coverage 9 days", coverage["answer"])
 
 	@patch.dict("os.environ", {
 		"MAZIWASHIELD_AI_API_KEY": "test-key",

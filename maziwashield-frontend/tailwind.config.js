@@ -1,9 +1,21 @@
 const colors = require("tailwindcss/colors");
 
 /* Font stacks: next/font exposes the CSS variables in layout.jsx */
-const inter = ["var(--font-inter)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"];
+const inter = [
+  "var(--font-inter)",
+  "Inter",
+  "ui-sans-serif",
+  "system-ui",
+  "sans-serif",
+];
 const newsreader = ["var(--font-newsreader)", "Newsreader", "Georgia", "serif"];
-const poppins = ["var(--font-poppins)", "Poppins", "ui-sans-serif", "system-ui", "sans-serif"];
+const poppins = [
+  "var(--font-poppins)",
+  "Poppins",
+  "ui-sans-serif",
+  "system-ui",
+  "sans-serif",
+];
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -148,30 +160,55 @@ module.exports = {
       },
 
       fontSize: {
-        "display-hero": ["56px", { lineHeight: "64px", letterSpacing: "-0.02em", fontWeight: "600" }],
-        "display-hero-mobile": ["36px", { lineHeight: "44px", letterSpacing: "-0.01em", fontWeight: "600" }],
-        "headline-xl": ["40px", { lineHeight: "48px", letterSpacing: "-0.015em", fontWeight: "600" }],
-        "headline-xl-mobile": ["28px", { lineHeight: "36px", fontWeight: "600" }],
+        "display-hero": [
+          "56px",
+          { lineHeight: "64px", letterSpacing: "-0.02em", fontWeight: "600" },
+        ],
+        "display-hero-mobile": [
+          "36px",
+          { lineHeight: "44px", letterSpacing: "-0.01em", fontWeight: "600" },
+        ],
+        "headline-xl": [
+          "40px",
+          { lineHeight: "48px", letterSpacing: "-0.015em", fontWeight: "600" },
+        ],
+        "headline-xl-mobile": [
+          "28px",
+          { lineHeight: "36px", fontWeight: "600" },
+        ],
         "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "500" }],
-        "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "500" }],
+        "headline-lg-mobile": [
+          "24px",
+          { lineHeight: "32px", fontWeight: "500" },
+        ],
         "headline-md": ["22px", { lineHeight: "28px", fontWeight: "600" }],
         "title-lg": ["18px", { lineHeight: "24px", fontWeight: "700" }],
         "title-md": ["16px", { lineHeight: "22px", fontWeight: "600" }],
         "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
         "body-md": ["15px", { lineHeight: "24px", fontWeight: "400" }],
         "body-sm": ["13px", { lineHeight: "18px", fontWeight: "400" }],
-        "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "700" }],
-        "label-numeric-currency": ["20px", { lineHeight: "24px", letterSpacing: "0.01em", fontWeight: "700" }],
+        "label-caps": [
+          "11px",
+          { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "700" },
+        ],
+        "label-numeric-currency": [
+          "20px",
+          { lineHeight: "24px", letterSpacing: "0.01em", fontWeight: "700" },
+        ],
       },
     },
   },
-  plugins: [require("@tailwindcss/forms"), require("@tailwindcss/container-queries")],
+  plugins: [
+    require("@tailwindcss/forms"),
+    require("@tailwindcss/container-queries"),
+    require("daisyui"),
+  ],
 
-          /* risk tones recurring in the farm screens */
-        "warn-bg": "#FFFBEA",
-        "warn-text": "#B45309",
-        "warn-line": "#FDE68A",
-        "danger-bg": "#FFF5F5",
-        "danger-text": "#C53030",
-        "danger-line": "#FEB2B2",
+  /* risk tones recurring in the farm screens */
+  "warn-bg": "#FFFBEA",
+  "warn-text": "#B45309",
+  "warn-line": "#FDE68A",
+  "danger-bg": "#FFF5F5",
+  "danger-text": "#C53030",
+  "danger-line": "#FEB2B2",
 };

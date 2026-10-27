@@ -1,0 +1,11 @@
+simulation: weather-advisor-outage
+routing: path
+mocks:
+  - name: open-meteo
+    routeKey: openmeteo
+    path: postman/mocks/open-meteo
+    scenarios:
+      - overrides:
+          conditions:
+            error:
+              status_code: 503

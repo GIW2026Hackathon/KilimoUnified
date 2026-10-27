@@ -1,6 +1,7 @@
 """Small, replaceable Open-Meteo Forecast API client using the stdlib HTTP client."""
 
 import json
+import os
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -9,7 +10,10 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
-OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_URL = os.environ.get(
+    "OPEN_METEO_API_URL",
+    "https://api.open-meteo.com/v1/forecast",
+).rstrip("/")
 DAILY_VARIABLES = (
     "precipitation_sum",
     "temperature_2m_min",

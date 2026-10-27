@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, ChevronsRight, LogOut, Shield } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS, isActive } from "@/lib/navigation";
 import Avatar from "@/components/ui/avatar";
 import { useShell } from "@/components/layout/shell-context";
-
-const BADGES = {
-  count: "rounded bg-surface/10 px-1.5 py-0.5 text-[10px] text-surface-container/80",
-  coop: "rounded bg-on-tertiary-container/20 px-1.5 py-0.5 text-[10px] font-bold text-on-tertiary-container",
-  alert: "rounded-full bg-error px-1.5 py-0.5 text-[10px] font-bold text-on-error",
-  ai: "rounded bg-on-tertiary-container px-1.5 py-0.5 font-label-caps text-[10px] font-bold uppercase tracking-wider text-primary",
-};
+import SignOutButton from "@/features/auth/components/sign-out-button";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -21,7 +15,6 @@ export default function Sidebar() {
   /* labels show from lg up, unless the desktop sidebar is collapsed to a rail */
   const label = collapsed ? "hidden" : "hidden lg:inline";
   const block = collapsed ? "hidden" : "hidden lg:block";
-  const flex = collapsed ? "hidden" : "hidden lg:flex";
 
   return (
     <aside
@@ -67,13 +60,6 @@ export default function Sidebar() {
               <ChevronsRight className="h-[18px] w-[18px]" />
             </button>
           )}
-          <div className={cn("mt-3 items-center justify-between rounded border border-surface-container-lowest/10 bg-primary/80 px-2 py-1 text-[10px]", flex)}>
-            <span className="flex items-center gap-1.5 text-secondary-fixed">
-              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-secondary-fixed motion-reduce:animate-none" />
-              USSD *384*45# Active
-            </span>
-            <span className="font-label-caps text-surface-container/70">KIAMBU HUB</span>
-          </div>
         </div>
 
         <nav aria-label="Main" className="space-y-1 p-space-sm">
@@ -104,10 +90,6 @@ export default function Sidebar() {
                     aria-hidden
                   />
                   <span className={cn("flex-1", label)}>{item.label}</span>
-                  {item.badge && <span className={cn(BADGES[item.badge.type], label)}>{item.badge.text}</span>}
-                  {item.badge?.type === "alert" && (
-                    <span className={cn("absolute right-2 top-2 h-2 w-2 rounded-full bg-error", collapsed ? "block" : "block lg:hidden")} />
-                  )}
                   {active && <span className={cn("h-1.5 w-1.5 rounded-full bg-on-tertiary-container", label)} />}
                 </Link>
               </div>
@@ -118,20 +100,12 @@ export default function Sidebar() {
 
       <div className="border-t border-primary/70 bg-primary/95 p-space-sm">
         <div className={cn("flex items-center justify-center gap-3 rounded-xl border border-surface/10 bg-surface/5 p-2", !collapsed && "lg:justify-start")}>
-          <Avatar initials="GW" tone="light" size="lg" />
+          <Avatar initials="FM" tone="light" size="lg" />
           <div className={cn("min-w-0 flex-1", block)}>
-            <p className="truncate font-title-md text-title-md leading-tight text-surface-container-lowest">Grace Wanjiku</p>
-            <p className="truncate font-body-sm text-[11px] text-surface-container-high/80">Dairy Keeper • Kiambu Hub</p>
-            <span className="block font-mono text-[9px] tracking-wide text-secondary-fixed">*384*45# Synced</span>
+            <p className="truncate font-title-md text-title-md leading-tight text-surface-container-lowest">Farmer account</p>
+            <p className="truncate font-body-sm text-[11px] text-surface-container-high/80">Climate and feed advisor</p>
           </div>
-          <Link
-            href="/login"
-            title="Sign out"
-            aria-label="Sign out"
-            className={cn("hidden p-1.5 text-surface-container/60 transition-colors hover:text-surface-container-lowest", !collapsed && "lg:block")}
-          >
-            <LogOut className="h-[18px] w-[18px]" />
-          </Link>
+          <SignOutButton label="Sign out" className={cn("flex items-center gap-1 text-xs text-surface-container/60 transition-colors hover:text-surface-container-lowest", collapsed && "hidden", !collapsed && "hidden lg:flex")} />
         </div>
       </div>
     </aside>

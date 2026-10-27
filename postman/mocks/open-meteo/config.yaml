@@ -1,0 +1,10 @@
+version: 1
+id: f413feb6-4e0e-49f9-a01e-6e267c128513
+name: open-meteo
+slug: open-meteo
+protocol: http
+port: 4901
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

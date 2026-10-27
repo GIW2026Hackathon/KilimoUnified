@@ -12,7 +12,7 @@ from monitoring.services.risk import evaluate_farm_risk
 
 
 TOPICS = {
-    "inventory": re.compile(r"\b(stock|inventory|usable|reserved|unusable|feed amount|how much feed)\b", re.I),
+    "inventory": re.compile(r"\b(stock|inventory|usable|reserved|unusable|feed amount|feed balance|feed store|how much feed|hay|silage|fodder stock)\b", re.I),
     "coverage": re.compile(r"\b(coverage|run out|last|days left|depletion)\b", re.I),
     "weather": re.compile(r"\b(weather|forecast|rain|rainfall|temperature|precipitation)\b", re.I),
     "alerts": re.compile(r"\b(alert|alerts|warning)\b", re.I),
@@ -72,12 +72,17 @@ def _format_inventory(rows, key):
     for item in rows:
         if key == "coverage":
             value = f"{item['coverage_days']} days" if item["coverage_days"] is not None else "unknown because daily consumption is missing or zero"
-            lines.append(f"{item['feed_type']}: estimated coverage {value}.")
+            lines.append(
+                f"{item['feed_type']}: {item['usable_stock_kg']} kg usable, estimated coverage {value}, "
+                f"inventory risk {item['inventory_risk_level']} (daily use {item['daily_consumption_kg'] or 'unknown'} kg)."
+            )
         else:
             lines.append(
                 f"{item['feed_type']}: {item['usable_stock_kg']} kg usable from "
                 f"{item['stock_kg']} kg stock ({item['unusable_kg']} kg unusable, "
-                f"{item['reserved_kg']} kg reserved); daily use {item['daily_consumption_kg'] or 'unknown'} kg."
+                f"{item['reserved_kg']} kg reserved); daily use {item['daily_consumption_kg'] or 'unknown'} kg, "
+                f"estimated coverage {item['coverage_days'] + ' days' if item['coverage_days'] is not None else 'unknown'}, "
+                f"inventory risk {item['inventory_risk_level']}."
             )
     return " ".join(lines)
 

@@ -5,17 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, CircleAlert, Eye, EyeOff, Grid3x3, Key, Lock, LogIn, ShieldCheck, Smartphone, X } from "lucide-react";
+import { ArrowRight, CircleAlert, Eye, EyeOff, Key, LogIn, ShieldCheck, UserRound, X } from "lucide-react";
 import { loginSchema } from "@/features/auth/schemas";
 import { useLogin } from "@/features/auth/hooks";
-import { useToast } from "@/components/ui/toast";
 import Input from "@/components/ui/input";
 import Button from "@/components/ui/button";
-import { USSD_CODE } from "@/lib/constants";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const mutation = useLogin();
@@ -24,7 +21,7 @@ export default function LoginForm() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { identifier: "", password: "", remember: true } });
+  } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { username: "", password: "" } });
 
   function onSubmit(values) {
     setDismissed(false);
@@ -37,10 +34,10 @@ export default function LoginForm() {
 
       <div className="mb-7">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-headline-md text-headline-md font-semibold text-deepForest">Welcome back, Dairy Keeper</h2>
-          <Lock className="h-6 w-6 text-forest/60" aria-hidden />
+          <h2 className="font-headline-md text-headline-md font-semibold text-deepForest">Welcome back</h2>
+          <ShieldCheck className="h-6 w-6 text-forest/60" aria-hidden />
         </div>
-        <p className="font-body-md text-body-md text-on-surface-variant">Sign in to manage herd feed reserves, bulk orders, and shortage forecasts.</p>
+        <p className="font-body-md text-body-md text-on-surface-variant">Sign in to review your farm profile, weather status, and feed planning estimates.</p>
       </div>
 
       {mutation.isError && !dismissed && (
@@ -65,37 +62,30 @@ export default function LoginForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
         <Input
-          id="identifier"
-          label="Email or M-Pesa Phone Number"
-          hint="Kenyan format"
-          icon={Smartphone}
+          id="username"
+          label="Username"
+          hint="For accounts registered here, use your phone number as the username."
+          icon={UserRound}
           autoComplete="username"
-          placeholder="e.g. 0712 345 678 or farmer@nakurudairy.co.ke"
-          error={errors.identifier?.message}
+          placeholder="Enter your username"
+          error={errors.username?.message || mutation.error?.fields?.username}
           inputClassName="border-lineStrong py-3 text-ink"
-          {...register("identifier")}
+          {...register("username")}
         />
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
             <label htmlFor="password" className="font-label-caps text-label-caps font-semibold uppercase text-forest">
-              Account Password / Cooperative PIN
+              Password
             </label>
-            <button
-              type="button"
-              onClick={() => toast({ title: "Reset link sent", description: `Check SMS, or dial ${USSD_CODE} to reset your PIN.`, tone: "info" })}
-              className="min-h-11 text-xs font-semibold text-brand transition-colors hover:text-brand-hover md:min-h-0"
-            >
-              Forgot PIN or Password?
-            </button>
           </div>
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
             icon={Key}
             autoComplete="current-password"
-            placeholder="Enter your security credentials"
-            error={errors.password?.message}
+            placeholder="Enter your password"
+            error={errors.password?.message || mutation.error?.fields?.password}
             inputClassName="border-lineStrong py-3 text-ink"
             trailing={
               <button
@@ -112,43 +102,19 @@ export default function LoginForm() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <label className="flex min-h-11 cursor-pointer select-none items-center gap-2.5">
-            <input type="checkbox" className="h-5 w-5 cursor-pointer rounded-[4px] border-2 border-lineStrong text-brand focus:ring-brand focus:ring-offset-0" {...register("remember")} />
-            <span className="text-xs font-medium text-on-surface-variant">Remember this device for 30 days</span>
-          </label>
-          <span className="inline-flex items-center gap-1 rounded border border-lineStrong/50 bg-mint1 px-2 py-0.5 text-[11px] font-medium text-forest">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-            256-bit Encrypted
-          </span>
-        </div>
-
         <div className="pt-2">
           <Button type="submit" variant="brand" size="lg" loading={mutation.isPending} className="w-full rounded-[10px] shadow-[0_4px_12px_-2px_rgba(38,167,85,0.3)]">
-            <span>Sign In to Feed Reserves</span>
+            <span>Sign in</span>
             <LogIn className="h-5 w-5" aria-hidden />
           </Button>
         </div>
 
-        <div className="relative flex items-center justify-center py-2">
-          <div className="w-full border-t border-line" />
-          <span className="absolute bg-card px-3 font-label-caps text-[10px] font-semibold uppercase tracking-wider text-outline">Or Authenticate Offline</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => toast({ title: "USSD one-time code", description: `Dial ${USSD_CODE} on your phone to receive a sign-in code.`, tone: "info" })}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-lineStrong bg-white px-5 py-2.5 font-title-md text-body-md font-semibold text-forest transition-all duration-150 hover:border-brand hover:bg-mint1 active:scale-[0.99]"
-        >
-          <Grid3x3 className="h-[19px] w-[19px] text-brand" aria-hidden />
-          <span>Sign in with USSD One-Time Code</span>
-        </button>
       </form>
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-6 text-xs">
         <span className="font-medium text-on-surface-variant">New to MaziwaShield?</span>
         <Link href="/register" className="group inline-flex min-h-11 items-center gap-1.5 font-semibold text-brand transition-colors hover:text-brand-hover">
-          <span>Create cooperative account</span>
+          <span>Create farmer account</span>
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1 motion-reduce:transition-none" aria-hidden />
         </Link>
       </div>
