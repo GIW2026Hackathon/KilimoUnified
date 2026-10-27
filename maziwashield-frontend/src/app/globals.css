@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens as CSS variables (mirrors tailwind.config.js) */
+:root {
+  --color-forest: #0c5c35;
+  --color-deep-forest: #025531;
+  --color-forest-end: #156e40;
+  --color-brand: #26a755;
+  --color-brand-hover: #219350;
+  --color-brand-light: #5eb97b;
+  --color-fresh: #60af2f;
+  --color-tile: #62bb4f;
+  --color-lime: #a0d244;
+  --color-mid: #429a52;
+  --color-teal: #01a077;
+  --color-chart-1: #2ab578;
+  --color-chart-2: #43bf88;
+  --color-farm: #3e9a4c;
+  --color-blue: #1f81cc;
+  --color-purple: #6b4791;
+  --color-orange: #df7f29;
+  --color-ai: #50a93f;
+  --color-page: #fbfdfa;
+  --color-card: #f2fcf4;
+  --color-mint-1: #eafaed;
+  --color-mint-2: #e5fcec;
+  --color-mint-3: #dff5e9;
+  --color-mint-4: #e4f9ea;
+  --color-mint-5: #e3f4ec;
+  --color-line: #c9efe0;
+  --color-line-strong: #acd7c1;
+  --color-ink: #0f2a1d;
+  --color-muted: #4b6b5a;
+  --color-accent-text: #0b642a;
+  --color-warning: #f2a81d;
+  --color-critical: #dc2626;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.brand.DEFAULT");
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* From Stitch <style> blocks (colors resolved from theme tokens) */
+  .dotted-lime-border {
+    border: 3px dashed theme("colors.lime.DEFAULT");
+    padding: 6px;
+  }
+
+  .custom-dotted-ring {
+    border: 2px dashed theme("colors.lime.DEFAULT");
+    padding: 6px;
+  }
+
+  .custom-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: theme("colors.surface-container-low");
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: theme("colors.outline-variant");
+    border-radius: 9999px;
+  }
+}
