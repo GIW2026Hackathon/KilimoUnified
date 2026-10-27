@@ -85,6 +85,30 @@ class FarmAssistantTests(TestCase):
 		"MAZIWASHIELD_AI_API_URL": "https://provider.invalid/chat/completions",
 		"MAZIWASHIELD_AI_MODEL": "test-model",
 	})
+	def test_general_farm_question_uses_ai_with_selected_farm_context(self):
+		provider = patch("assistantAnalytics.services.farm_assistant.urlopen").start()
+		self.addCleanup(patch.stopall)
+		provider.return_value.__enter__.return_value.read.return_value = json.dumps({
+			"choices": [{"message": {"content": "I can explain what the selected farm's recorded information means."}}]
+		}).encode()
+
+		result = answer_farm_question(self.farm, "Can you help me understand my farm?")
+
+		self.assertEqual(result["topic"], "other")
+		self.assertEqual(result["ai_status"], "AI")
+		self.assertIn("I can explain", result["ai_explanation"])
+		self.assertIn("This farm's recorded risk is MEDIUM", result["answer"])
+		payload = json.loads(provider.call_args.args[0].data.decode())
+		context = payload["messages"][1]["content"]
+		self.assertIn("90.00", context)
+		self.assertIn("MEDIUM", context)
+		self.assertNotIn("Private Farm", context)
+
+	@patch.dict("os.environ", {
+		"MAZIWASHIELD_AI_API_KEY": "test-key",
+		"MAZIWASHIELD_AI_API_URL": "https://provider.invalid/chat/completions",
+		"MAZIWASHIELD_AI_MODEL": "test-model",
+	})
 	def test_provider_timeout_and_unverified_numeric_output_fall_back(self):
 		with patch("assistantAnalytics.services.farm_assistant.urlopen", side_effect=TimeoutError()):
 			failed = answer_farm_question(self.farm, "What is my current risk?")

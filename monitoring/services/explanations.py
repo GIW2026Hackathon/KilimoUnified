@@ -2,7 +2,7 @@
 import json
 import os
 import re
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django.utils import timezone
@@ -49,12 +49,12 @@ def _valid_response(text, evaluation):
 def explain_evaluation(evaluation, *, force=False):
     """Return cached or provider explanation; safely fall back when unavailable."""
     if evaluation.ai_explanation and not force:
-        return {"text": evaluation.ai_explanation, "source": "AI"}
+        return {"text": evaluation.ai_explanation, "source": "AI", "status": "CACHED"}
     token = os.environ.get("MAZIWASHIELD_AI_API_KEY", "").strip()
     endpoint = os.environ.get("MAZIWASHIELD_AI_API_URL", "").strip()
     model = os.environ.get("MAZIWASHIELD_AI_MODEL", "").strip()
     if not (token and endpoint and model):
-        return {"text": fallback_explanation(evaluation), "source": "RULES"}
+        return {"text": fallback_explanation(evaluation), "source": "RULES", "status": "NOT_CONFIGURED"}
     prompt = (
         "Explain this verified farm risk result in plain, concise language. Do not calculate or change risk. "
         "Use only supplied facts, distinguish missing/stale data, and recommend only the permitted action. "
@@ -69,10 +69,23 @@ def explain_evaluation(evaluation, *, force=False):
         text = payload["choices"][0]["message"]["content"]
         valid = _valid_response(text, evaluation)
         if not valid:
-            return {"text": fallback_explanation(evaluation), "source": "RULES"}
+            return {"text": fallback_explanation(evaluation), "source": "RULES", "status": "INVALID_RESPONSE"}
         evaluation.ai_explanation = valid
         evaluation.ai_generated_at = timezone.now()
         evaluation.save(update_fields=["ai_explanation", "ai_generated_at"])
-        return {"text": valid, "source": "AI"}
+        return {"text": valid, "source": "AI", "status": "GENERATED"}
+    except HTTPError as error:
+        if error.code in (401, 403):
+            status = "AUTHORIZATION_ERROR"
+        elif error.code == 429:
+            status = "RATE_LIMITED"
+        else:
+            status = "PROVIDER_ERROR"
+        return {
+            "text": fallback_explanation(evaluation),
+            "source": "RULES",
+            "status": status,
+            "http_status": error.code,
+        }
     except (URLError, TimeoutError, OSError, ValueError, KeyError, TypeError):
-        return {"text": fallback_explanation(evaluation), "source": "RULES"}
+        return {"text": fallback_explanation(evaluation), "source": "RULES", "status": "UNAVAILABLE"}

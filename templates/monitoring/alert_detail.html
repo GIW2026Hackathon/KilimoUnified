@@ -1,2 +1,87 @@
-{% extends 'base.html' %}{% block title %}Risk alert | {{ alert.farm.name }}{% endblock %}{% block content %}
-<main class="min-h-screen bg-base-200 p-4 sm:p-8"><article class="card mx-auto max-w-4xl bg-base-100 shadow"><div class="card-body space-y-3"><a class="link" href="{% url 'core:alerts' %}">All alerts</a><h1 class="card-title text-2xl">{{ alert.get_risk_level_display }} risk · {{ alert.farm.name }}</h1><p>Status: {{ alert.get_status_display }}</p><p>Evaluation time: {% if alert.evaluation %}{{ alert.evaluation.evaluated_at|date:'M j, Y, P' }}{% else %}{{ alert.updated_at|date:'M j, Y, P' }}{% endif %}</p><p>{{ alert.message }}</p><h2 class="font-semibold">Recommended action</h2><p>{{ alert.recommended_action }}</p>{% if alert.evaluation %}<h2 class="font-semibold">Verified evidence</h2><p>Inventory risk: {{ alert.evaluation.inventory_risk_level }}. Forecast status: {{ alert.evaluation.evidence.weather.status|title }}. Weather did not change the level.</p><ul class="list-disc pl-6">{% for row in alert.evaluation.evidence.inventory %}<li>{{ row.feed_type }}: {{ row.usable_stock_kg }} kg usable, {{ row.daily_consumption_kg|default:'unknown' }} kg/day; {% if row.coverage_days %}{{ row.coverage_days }} days coverage{% else %}coverage unknown{% endif %}.</li>{% empty %}<li>No inventory evidence recorded.</li>{% endfor %}</ul><p>Rules: {{ alert.evaluation.evidence.rule_ids|join:', ' }}</p>{% if alert.evaluation.evidence.weather.indicators %}<h3 class="font-semibold">Forecast context</h3><ul class="list-disc pl-6">{% for day in alert.evaluation.evidence.weather.indicators %}<li>{{ day.date }} · {{ day.freshness|title }} · precipitation {% if day.precipitation_mm is not None %}{{ day.precipitation_mm }} mm{% else %}unknown{% endif %} · temperature {% if day.temperature_min_c is not None %}{{ day.temperature_min_c }}{% else %}?{% endif %}–{% if day.temperature_max_c is not None %}{{ day.temperature_max_c }} °C{% else %}unknown{% endif %}</li>{% endfor %}</ul>{% endif %}<p>{% if alert.evaluation.ai_explanation %}{{ alert.evaluation.ai_explanation }}{% else %}{{ alert.evaluation.explanation }}{% endif %}</p><form method="post" action="{% url 'core:alert_action' alert.id 'explain' %}">{% csrf_token %}<button class="btn" type="submit">{% if alert.evaluation.ai_explanation %}Refresh AI explanation{% else %}Explain this result{% endif %}</button></form>{% endif %}<div class="flex flex-wrap gap-2">{% if alert.status == 'ACTIVE' %}<form method="post" action="{% url 'core:alert_action' alert.id 'acknowledge' %}">{% csrf_token %}<button class="btn" type="submit">Acknowledge</button></form>{% endif %}{% if alert.status != 'RESOLVED' %}<form method="post" action="{% url 'core:alert_action' alert.id 'resolve' %}">{% csrf_token %}<button class="btn" type="submit">Resolve</button></form>{% endif %}</div></div></article></main>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Risk alert | {{ alert.farm.name }}{% endblock %}
+{% block content %}
+<main class="min-h-screen bg-base-200 p-4 sm:p-8">
+  <article class="card mx-auto max-w-4xl bg-base-100 shadow">
+    <div class="card-body space-y-4">
+      <a class="link w-fit" href="{% url 'core:alerts' %}">All alerts</a>
+
+      {% if messages %}
+      <div class="space-y-2" aria-live="polite">
+        {% for message in messages %}
+        <div class="alert {% if 'error' in message.tags %}alert-error{% elif 'success' in message.tags %}alert-success{% elif 'warning' in message.tags %}alert-warning{% else %}alert-info{% endif %}" role="status">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <header class="space-y-2">
+        <h1 class="card-title text-2xl">{{ alert.get_risk_level_display }} risk · {{ alert.farm.name }}</h1>
+        <p>Status: {{ alert.get_status_display }}</p>
+        <p>Evaluation time: {% if alert.evaluation %}{{ alert.evaluation.evaluated_at|date:'M j, Y, P' }}{% else %}{{ alert.updated_at|date:'M j, Y, P' }}{% endif %}</p>
+      </header>
+
+      <section class="space-y-2">
+        <p>{{ alert.message }}</p>
+        <h2 class="font-semibold">Recommended action</h2>
+        <p>{{ alert.recommended_action }}</p>
+      </section>
+
+      {% if alert.evaluation %}
+      <section class="space-y-3">
+        <h2 class="text-xl font-semibold">Verified evidence</h2>
+        <p>Inventory risk: {{ alert.evaluation.inventory_risk_level }}. Forecast status: {{ alert.evaluation.evidence.weather.status|title }}. Weather did not change the level.</p>
+        <ul class="list-disc pl-6">
+          {% for row in alert.evaluation.evidence.inventory %}
+          <li>{{ row.feed_type }}: {{ row.usable_stock_kg }} kg usable, {{ row.daily_consumption_kg|default:'unknown' }} kg/day; {% if row.coverage_days %}{{ row.coverage_days }} days coverage{% else %}coverage unknown{% endif %}.</li>
+          {% empty %}
+          <li>No inventory evidence recorded.</li>
+          {% endfor %}
+        </ul>
+        <p>Rules: {{ alert.evaluation.evidence.rule_ids|join:', ' }}</p>
+
+        {% if alert.evaluation.evidence.weather.indicators %}
+        <div>
+          <h3 class="font-semibold">Forecast context</h3>
+          <ul class="list-disc pl-6">
+            {% for day in alert.evaluation.evidence.weather.indicators %}
+            <li>{{ day.date }} · {{ day.freshness|title }} · precipitation {% if day.precipitation_mm is not None %}{{ day.precipitation_mm }} mm{% else %}unknown{% endif %} · temperature {% if day.temperature_min_c is not None %}{{ day.temperature_min_c }}{% else %}?{% endif %}–{% if day.temperature_max_c is not None %}{{ day.temperature_max_c }} °C{% else %}unknown{% endif %}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="rounded-box bg-base-200 p-4">
+          <h3 class="font-semibold">Explanation</h3>
+          <p>{% if alert.evaluation.ai_explanation %}{{ alert.evaluation.ai_explanation }}{% else %}{{ alert.evaluation.explanation }}{% endif %}</p>
+          {% if alert.evaluation.ai_generated_at %}<p class="mt-2 text-sm text-base-content/70">AI explanation generated {{ alert.evaluation.ai_generated_at|date:'M j, Y, P' }}.</p>{% endif %}
+        </div>
+
+        <form method="post" action="{% url 'core:alert_action' alert.id 'explain' %}">
+          {% csrf_token %}
+          <button class="btn btn-secondary" type="submit">{% if alert.evaluation.ai_explanation %}Refresh AI explanation{% else %}Explain this result{% endif %}</button>
+        </form>
+      </section>
+      {% endif %}
+
+      {% with farm=alert.farm %}
+      {% include 'assistantAnalytics/_farm_question_prompt.html' with starter_question='Explain why this alert was raised using its recorded evidence.' %}
+      {% endwith %}
+
+      <div class="flex flex-wrap gap-2">
+        {% if alert.status == 'ACTIVE' %}
+        <form method="post" action="{% url 'core:alert_action' alert.id 'acknowledge' %}">
+          {% csrf_token %}
+          <button class="btn" type="submit">Acknowledge</button>
+        </form>
+        {% endif %}
+        {% if alert.status != 'RESOLVED' %}
+        <form method="post" action="{% url 'core:alert_action' alert.id 'resolve' %}">
+          {% csrf_token %}
+          <button class="btn btn-outline" type="submit">Resolve</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </article>
+</main>
+{% endblock %}

@@ -1,0 +1,20 @@
+<section class="card border border-base-300 bg-base-100 shadow-sm" data-farm-assistant>
+  <div class="card-body gap-3">
+    <div>
+      <h2 class="card-title">Ask the farm assistant</h2>
+      <p class="text-sm text-base-content/70">Get an answer grounded in this farm’s recorded inventory, risk, alerts, and stored forecast. Missing information will be identified clearly.</p>
+    </div>
+    <form method="post" action="{% url 'assistantAnalytics:ask' %}" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="farm" value="{{ farm.pk }}">
+      <label class="form-control w-full">
+        <span class="label-text mb-2">Your question</span>
+        <textarea class="textarea textarea-bordered min-h-24 w-full" name="question" rows="3" maxlength="1000" required placeholder="{{ starter_question }}"></textarea>
+      </label>
+      <div class="flex flex-wrap items-center gap-3">
+        <button class="btn btn-primary" type="submit">Ask about {{ farm.name }}</button>
+        <a class="link link-hover text-sm" href="{% url 'assistantAnalytics:ask' %}?farm={{ farm.pk }}">Open full farm assistant</a>
+      </div>
+    </form>
+  </div>
+</section>

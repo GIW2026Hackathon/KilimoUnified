@@ -33,6 +33,7 @@ class FarmDashboardTests(TestCase):
         self.assertContains(response, "Dairy One")
         self.assertContains(response, "UNKNOWN")
         self.assertContains(response, "No inventory is recorded")
+        self.assertContains(response, 'data-farm-assistant')
         self.assertNotContains(response, "other_dashboard_user")
 
     def test_farm_creation_assigns_owner_and_validates_coordinate_pair(self):
@@ -89,3 +90,6 @@ class FarmDashboardTests(TestCase):
                 response = self.client.get(reverse(route, args=args))
                 self.assertEqual(response.status_code, 200)
                 self.assertTemplateUsed(response, template)
+                if route in ("core:farm_detail", "core:inventory_list"):
+                    self.assertContains(response, 'data-farm-assistant')
+                    self.assertContains(response, reverse("assistantAnalytics:ask"))

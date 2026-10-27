@@ -106,7 +106,22 @@ def alert_action(request, alert_id, action):
   alert = get_object_or_404(RiskAlert, pk=alert_id, farm__owner=request.user)
   if action == "explain" and alert.evaluation_id:
     from monitoring.services.explanations import explain_evaluation
-    explain_evaluation(alert.evaluation, force=True)
+    result = explain_evaluation(alert.evaluation, force=True)
+    if result["source"] == "AI":
+      messages.success(request, "AI explanation generated and saved for this assessment.")
+    elif result.get("status") == "AUTHORIZATION_ERROR":
+      messages.error(
+        request,
+        "The AI provider rejected the request. Check that the API key is valid and the configured model is enabled. The rule-based explanation is still shown.",
+      )
+    elif result.get("status") == "RATE_LIMITED":
+      messages.warning(request, "The AI provider rate limit was reached. The rule-based explanation is still shown; try again later.")
+    elif result.get("status") == "INVALID_RESPONSE":
+      messages.warning(request, "The AI response did not pass validation. The rule-based explanation is still shown.")
+    elif result.get("status") == "NOT_CONFIGURED":
+      messages.info(request, "AI is not configured. The rule-based explanation is shown.")
+    else:
+      messages.warning(request, "The AI provider is unavailable. The rule-based explanation is still shown.")
     return redirect("core:alert_detail", alert_id=alert.pk)
   if action == "acknowledge" and alert.status == RiskAlert.Status.ACTIVE:
     alert.status = RiskAlert.Status.ACKNOWLEDGED

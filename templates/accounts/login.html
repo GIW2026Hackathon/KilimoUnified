@@ -1,31 +1,45 @@
-{% extends "base.html" %} {% block title %}Sign in | Kilimo{% endblock %}
-{%block content %}
-<main class="min-h-screen grid place-items-center bg-base-200 p-6">
+{% extends "base.html" %}
+{% block title %}Sign in | MaziwaShield{% endblock %}
+{% block content %}
+<main class="min-h-screen grid place-items-center bg-base-200 p-4 sm:p-6">
   <section class="card w-full max-w-md bg-base-100 shadow-xl">
     <div class="card-body">
+      <a class="link link-hover w-fit" href="{% url 'core:home' %}">MaziwaShield</a>
       <h1 class="card-title text-2xl">Sign in</h1>
       <p class="text-base-content/70">Enter your username and password.</p>
+
       <form method="post" class="mt-4 space-y-4">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ next }}" />
+
         {% if form.non_field_errors %}
-        <div class="alert alert-error" role="alert">
-          <div>{{ form.non_field_errors }}</div>
-        </div>
+        <div class="alert alert-error" role="alert">{{ form.non_field_errors }}</div>
         {% endif %}
+
         <div class="form-control w-full">
-          {{ form.username.label_tag }} {{ form.username }} {{
-          form.username.errors }}
+          <label class="label" for="{{ form.username.id_for_label }}">
+            <span class="label-text">Username</span>
+          </label>
+          {{ form.username }}
+          {% if form.username.errors %}
+          <div class="mt-1 text-sm text-error" role="alert">{{ form.username.errors }}</div>
+          {% endif %}
         </div>
+
         <div class="form-control w-full">
-          {{ form.password.label_tag }} {{ form.password }} {{
-          form.password.errors }}
+          <label class="label" for="{{ form.password.id_for_label }}">
+            <span class="label-text">Password</span>
+          </label>
+          {{ form.password }}
+          {% if form.password.errors %}
+          <div class="mt-1 text-sm text-error" role="alert">{{ form.password.errors }}</div>
+          {% endif %}
         </div>
+
         <button class="btn btn-primary w-full" type="submit">Sign in</button>
       </form>
-      <a class="link link-hover mt-2 text-center" href="{% url 'core:home' %}"
-        >Back to home</a
-      >
+
+      <a class="link link-hover mt-2 text-center" href="{% url 'core:home' %}">Back to home</a>
     </div>
   </section>
 </main>

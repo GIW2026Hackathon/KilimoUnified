@@ -41,12 +41,18 @@
         <p>{{ result.answer }}</p>
         {% if result.ai_explanation %}
         <div class="rounded-box bg-base-200 p-4">
-          <h3 class="font-semibold">AI wording</h3>
+          <h3 class="font-semibold">AI response</h3>
           <p>{{ result.ai_explanation }}</p>
           <p class="mt-2 text-sm text-base-content/70">This wording is supplementary. The verified answer and farm records above remain authoritative.</p>
         </div>
         {% elif result.ai_status == "NOT_CONFIGURED" %}
         <p class="text-sm text-base-content/70">AI provider is not configured; this answer uses the deterministic farm data service.</p>
+        {% elif result.ai_status == "AUTHORIZATION_ERROR" %}
+        <p class="text-sm text-error">The AI provider rejected the request. Check the API key and model access; the verified farm answer is still shown.</p>
+        {% elif result.ai_status == "RATE_LIMITED" %}
+        <p class="text-sm text-base-content/70">The AI provider rate limit was reached. Try again later; the verified farm answer is still shown.</p>
+        {% elif result.ai_status == "PROVIDER_ERROR" %}
+        <p class="text-sm text-base-content/70">The AI provider returned an error. The verified farm answer is still shown.</p>
         {% elif result.ai_status == "UNAVAILABLE" %}
         <p class="text-sm text-base-content/70">AI provider is unavailable; showing the deterministic farm data answer.</p>
         {% elif result.ai_status == "INVALID_RESPONSE" %}

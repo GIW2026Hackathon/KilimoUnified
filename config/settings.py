@@ -12,10 +12,37 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 import secrets
+import shlex
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _load_local_env(path):
+    """Load simple KEY=value or export KEY=value entries without overriding the process environment."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[len("export "):].lstrip()
+        key, separator, raw_value = line.partition("=")
+        if not separator or not key.isidentifier():
+            continue
+        try:
+            parsed = shlex.split(raw_value, comments=True, posix=True)
+        except ValueError:
+            continue
+        if len(parsed) <= 1:
+            os.environ.setdefault(key, parsed[0] if parsed else "")
+
+
+_load_local_env(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production

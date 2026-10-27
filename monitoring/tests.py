@@ -14,6 +14,7 @@ from farms.models import FeedInventory, FeedType
 from weather.models import WeatherForecastRun, WeatherRecord
 from django.utils import timezone
 from datetime import timedelta
+from urllib.error import HTTPError
 import json
 from zoneinfo import ZoneInfo
 
@@ -164,6 +165,27 @@ class RiskAlertTests(TestCase):
 		detail = self.client.get(reverse("core:alert_detail", args=[alert.pk]))
 		self.assertEqual(detail.status_code, 200)
 		self.assertTemplateUsed(detail, "monitoring/alert_detail.html")
+		self.assertContains(detail, 'data-farm-assistant')
+		self.assertContains(detail, "Explain why this alert was raised")
+
+	@patch("monitoring.services.explanations.explain_evaluation", return_value={
+		"source": "RULES", "status": "AUTHORIZATION_ERROR", "http_status": 403,
+		"text": "Rule-based fallback explanation.",
+	})
+	def test_explain_action_displays_provider_rejection_message(self, mock_explain):
+		self.make_inventory("7")
+		result = evaluate_farm_risk(self.farm)
+		self.client.force_login(self.farm.owner)
+
+		response = self.client.post(
+			reverse("core:alert_action", args=[result["alert"].pk, "explain"]),
+			follow=True,
+		)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertContains(response, "AI provider rejected the request")
+		self.assertContains(response, "rule-based explanation is still shown")
+		mock_explain.assert_called_once_with(result["evaluation"], force=True)
 
 	def test_alert_state_change_requires_csrf(self):
 		alert = RiskAlert.objects.create(
@@ -208,6 +230,12 @@ class RiskAlertTests(TestCase):
 		evaluation = evaluate_farm_risk(self.farm)["evaluation"]
 		with patch("monitoring.services.explanations.urlopen", side_effect=TimeoutError()):
 			self.assertEqual(explain_evaluation(evaluation)["source"], "RULES")
+		with patch.dict("os.environ", {"MAZIWASHIELD_AI_API_KEY": "test-key", "MAZIWASHIELD_AI_API_URL": "https://provider.invalid/chat/completions", "MAZIWASHIELD_AI_MODEL": "example"}):
+			with patch("monitoring.services.explanations.urlopen", side_effect=HTTPError("https://provider.invalid", 403, "Forbidden", {}, None)):
+				denied = explain_evaluation(evaluation, force=True)
+		self.assertEqual(denied["source"], "RULES")
+		self.assertEqual(denied["status"], "AUTHORIZATION_ERROR")
+		self.assertEqual(denied["http_status"], 403)
 		response = patch("monitoring.services.explanations.urlopen").start()
 		self.addCleanup(patch.stopall)
 		response.return_value.__enter__.return_value.read.return_value = json.dumps({"choices": [{"message": {"content": "Your HIGH assessment means reorder seven hundred bags today, with guaranteed success."}}]}).encode()
