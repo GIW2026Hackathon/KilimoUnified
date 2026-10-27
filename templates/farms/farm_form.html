@@ -1,2 +1,39 @@
 {% extends 'base.html' %}{% block title %}{% if farm %}Edit{% else %}Add{% endif %} farm | MaziwaShield{% endblock %}{% block content %}
-<main class="min-h-screen bg-base-200 p-4 sm:p-8"><section class="card mx-auto max-w-2xl bg-base-100 shadow"><div class="card-body"><a class="link w-fit" href="{% url 'core:dashboard' %}">Dashboard</a><h1 class="card-title text-2xl">{% if farm %}Edit farm{% else %}Add farm{% endif %}</h1><form method="post" class="space-y-4">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<p class="text-error">{{ field.errors|striptags }}</p>{% endif %}{% if field.help_text %}<p class="text-sm">{{ field.help_text }}</p>{% endif %}</div>{% endfor %}<button class="btn" type="submit">Save farm</button></form></div></section></main>{% endblock %}
+<main class="min-h-screen bg-base-200 p-4 sm:p-8"><section class="card mx-auto max-w-2xl bg-base-100 shadow"><div class="card-body"><a class="link w-fit" href="{% url 'core:dashboard' %}">Dashboard</a><h1 class="card-title text-2xl">{% if farm %}Edit farm{% else %}Add farm{% endif %}</h1><form method="post" class="space-y-4">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<div><label class="label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<p class="text-error">{{ field.errors|striptags }}</p>{% endif %}{% if field.help_text %}<p class="text-sm">{{ field.help_text }}</p>{% endif %}</div>{% endfor %}<section aria-labelledby="location-heading" class="space-y-2"><h2 id="location-heading" class="font-semibold">Current location</h2><p class="text-sm text-base-content/70">Allow your browser to share this device's coordinates. You can also enter coordinates above.</p><button class="btn" type="button" id="use-current-location">Use current location</button><p id="location-status" role="status" aria-live="polite" class="text-sm"></p></section><button class="btn" type="submit">Save farm</button></form></div></section></main>
+<script>
+(() => {
+  const button = document.getElementById("use-current-location");
+  const status = document.getElementById("location-status");
+  const latitude = document.getElementById("id_latitude");
+  const longitude = document.getElementById("id_longitude");
+  if (!button || !status || !latitude || !longitude) return;
+
+  button.addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      status.textContent = "Location is not available in this browser. Enter coordinates manually.";
+      return;
+    }
+    button.disabled = true;
+    status.textContent = "Requesting your location…";
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        latitude.value = position.coords.latitude.toFixed(6);
+        longitude.value = position.coords.longitude.toFixed(6);
+        status.textContent = "Coordinates added. Confirm the farm county and save.";
+        button.disabled = false;
+      },
+      (error) => {
+        const messages = {
+          1: "Location permission was denied. Enter coordinates manually or allow location access in your browser.",
+          2: "Your current location could not be determined. Try again or enter coordinates manually.",
+          3: "The location request timed out. Try again or enter coordinates manually."
+        };
+        status.textContent = messages[error.code] || "Location could not be read. Enter coordinates manually.";
+        button.disabled = false;
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  });
+})();
+</script>
+{% endblock %}

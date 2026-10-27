@@ -62,18 +62,9 @@
             {% for record in forecast_records %}
             <tr>
               <th scope="row">{{ record.forecast_date|date:"D, M j" }}</th>
-              <td>
-                {% if record.precipitation_mm is not None %}{{
-                record.precipitation_mm }} mm{% else %}Unknown{% endif %}
-              </td>
-              <td>
-                {% if record.temperature_min_c is not None %}{{
-                record.temperature_min_c }} °C{% else %}Unknown{% endif %}
-              </td>
-              <td>
-                {% if record.temperature_max_c is not None %}{{
-                record.temperature_max_c }} °C{% else %}Unknown{% endif %}
-              </td>
+              <td>{% if record.precipitation_mm is not None %}{{ record.precipitation_mm }} mm{% else %}Unknown{% endif %}</td>
+              <td>{% if record.temperature_min_c is not None %}{{ record.temperature_min_c }} °C{% else %}Unknown{% endif %}</td>
+              <td>{% if record.temperature_max_c is not None %}{{ record.temperature_max_c }} °C{% else %}Unknown{% endif %}</td>
             </tr>
             {% endfor %}
           </tbody>

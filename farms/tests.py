@@ -1,14 +1,19 @@
 
 from decimal import Decimal
 from datetime import timedelta
+from io import StringIO
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.management import call_command, CommandError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.test.utils import captured_stdout
 from django.utils import timezone
 
 from .models import Farm, FeedInventory, FeedType
+from monitoring.models import RiskAlert, RiskEvaluation
+from weather.models import WeatherForecastRun
 from .services.inventory import (
     InventoryStatus,
     calculate_projected_stock,
@@ -22,6 +27,36 @@ from .services.inventory import (
     reserve_usable_feed,
     update_daily_consumption,
 )
+
+
+class DemoDataCommandTests(TestCase):
+    def test_seed_command_creates_repeatable_risk_scenarios_without_fake_weather(self):
+        user = get_user_model().objects.create_user(username="seed_demo_test", password="test-password")
+
+        call_command("seed_demo_data", username=user.get_username(), stdout=StringIO())
+
+        farms = Farm.objects.filter(owner=user)
+        self.assertEqual(farms.count(), 4)
+        self.assertEqual(FeedInventory.objects.filter(farm__owner=user).count(), 3)
+        self.assertEqual(RiskEvaluation.objects.filter(farm__owner=user).count(), 4)
+        self.assertEqual(RiskAlert.objects.filter(farm__owner=user).count(), 4)
+        self.assertFalse(WeatherForecastRun.objects.filter(farm__owner=user).exists())
+        levels = dict(farms.values_list("name", "risk_evaluations__risk_level"))
+        self.assertEqual(levels["MaziwaShield Demo - Nakuru"], "HIGH")
+        self.assertEqual(levels["MaziwaShield Demo - Kiambu"], "MEDIUM")
+        self.assertEqual(levels["MaziwaShield Demo - Uasin Gishu"], "LOW")
+        self.assertEqual(levels["MaziwaShield Demo - Nyandarua"], "UNKNOWN")
+
+        call_command("seed_demo_data", username=user.get_username(), stdout=StringIO())
+        self.assertEqual(Farm.objects.filter(owner=user).count(), 4)
+        self.assertEqual(RiskEvaluation.objects.filter(farm__owner=user).count(), 4)
+
+        call_command("seed_demo_data", username=user.get_username(), reevaluate=True, stdout=StringIO())
+        self.assertEqual(RiskEvaluation.objects.filter(farm__owner=user).count(), 8)
+
+    def test_seed_command_requires_an_existing_user(self):
+        with self.assertRaises(CommandError):
+            call_command("seed_demo_data", username="missing_demo_user", stdout=StringIO())
 
 
 class FeedInventoryCoverageTests(TestCase):

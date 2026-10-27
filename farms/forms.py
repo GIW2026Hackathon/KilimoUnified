@@ -11,7 +11,7 @@ class FarmForm(forms.ModelForm):
 
     class Meta:
         model = Farm
-        fields = ("name", "location", "latitude", "longitude")
+        fields = ("name", "county", "location", "latitude", "longitude")
 
     def clean(self):
         cleaned = super().clean()

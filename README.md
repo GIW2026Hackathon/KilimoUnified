@@ -64,7 +64,17 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Authentication remains in the existing `accounts` app. Sign in, then use the dashboard to add farms and view farm, inventory, weather, and alert summaries. Farm coordinates are optional and must be entered together. Inventory rows are currently maintained through the existing Django admin and inventory service operations.
+Authentication remains in the existing `accounts` app. Sign in, then use the dashboard to add farms and view farm, inventory, weather, and alert summaries. Farm county is entered directly. The optional **Use current location** control asks the browser for permission and fills latitude/longitude; it requires HTTPS (or localhost) and does not infer a county. Coordinates may also be entered manually and must be supplied together. Inventory rows are currently maintained through the existing Django admin and inventory service operations.
+
+### Create local demo data
+
+After creating a user and applying migrations, create sample farms and inventory owned by that user:
+
+```sh
+python manage.py seed_demo_data --username YOUR_USERNAME
+```
+
+This creates four clearly named Kenyan demo farms covering HIGH (7 days), MEDIUM (10 days), LOW (20 days), and UNKNOWN (no inventory) states. It creates risk assessments and alerts for the dashboard and assistant. The command is repeatable: existing demo farms, inventory, and historical assessments are preserved. Use `--reevaluate` only when you intentionally want another saved assessment for each demo farm. It does not generate forecast records; use `python manage.py refresh_weather` to fetch real forecasts for farms with coordinates. Demo records can be removed manually in Django Admin when no longer needed.
 
 ## Shortage risk and alerts
 
@@ -95,5 +105,11 @@ python manage.py explain_risk_evaluation 123 --refresh
 ```
 
 The adapter sends only that evaluation's verified measurements, dates, freshness, rules, and permitted action, uses an 8-second timeout and short output limit, caches accepted output on the evaluation, and falls back to the deterministic explanation on missing configuration, invalid output, or provider failure. It rejects changed risk labels and numeric facts not present in the verified input. AI text cannot update a risk result. Avoid endpoints that retain request data unless permitted by your privacy policy.
+
+## Farm assistant
+
+The existing `assistantAnalytics` app now provides `/assistant/`, a signed-in, farm-scoped question page. It answers from current recorded inventory, the deterministic risk service, active alerts, and stored versioned forecasts. Supplier comparisons and orders are not implemented, so it explicitly reports that those records are unavailable. It does not call Open-Meteo while answering a question. The user's selected farm is constrained to farms they own on the server.
+
+When the optional AI environment variables above are configured, the assistant may request one short supplementary framing sentence for inventory, coverage, risk, or alert answers. The deterministic answer stays primary; provider wording that adds measurements, risk/weather claims, prices, or unsupported advice is rejected. Weather and procurement questions use deterministic responses and do not call the language model. If the provider is missing, times out, fails, or returns invalid wording, the verified answer remains available. The assistant is currently a stateless question-and-answer page and does not retain chat history. A provider can be smoke-tested against a local OpenAI-compatible stand-in with the opt-in `MAZIWASHIELD_RUN_AI_SIMULATION_TEST=1` assistant test; keep the test endpoint local and use dummy credentials.
 
 Apply migrations with `python manage.py migrate`, run the full regression suite with `python manage.py test`, and verify the project with `python manage.py check` and `python manage.py makemigrations --check`. Deployers must configure secrets and environment-specific hosts, apply migrations, and keep scheduled weather refresh enabled. Forecast quality and the provisional inventory coverage cutoffs still require local operational validation.

@@ -372,6 +372,32 @@ class WeatherForecastServiceTests(TestCase):
 
         self.assertContains(response, "This forecast is stale")
 
+    def test_forecast_page_renders_measurement_values_not_template_tokens(self):
+        from weather.views import _farm_local_today
+
+        today = _farm_local_today()
+        run = WeatherForecastRun.objects.create(
+            farm=self.farm,
+            source=WeatherForecastRun.Source.OPEN_METEO,
+            status=WeatherForecastRun.Status.SUCCESS,
+        )
+        WeatherRecord.objects.create(
+            forecast_run=run,
+            forecast_date=today,
+            precipitation_mm=Decimal("2.40"),
+            temperature_min_c=Decimal("13.20"),
+            temperature_max_c=Decimal("24.80"),
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("weather:farm_forecast", args=[self.farm.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "2.40 mm")
+        self.assertContains(response, "13.20 °C")
+        self.assertContains(response, "24.80 °C")
+        self.assertNotContains(response, "{{ record.")
+
     def test_horizon_returns_latest_version_by_date_in_order(self):
         for forecast_day, amount in (
             (date(2026, 10, 27), Decimal("2")),
@@ -396,6 +422,7 @@ class WeatherForecastServiceTests(TestCase):
             reverse("weather:farm_forecast", args=[self.no_coordinates_farm.pk])
         )
         self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "weather/farm_forecast.html")
         self.assertContains(response, "add both latitude and longitude")
         self.assertContains(response, "Open-Meteo")
 

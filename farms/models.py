@@ -15,6 +15,7 @@ class Farm(models.Model):
         related_name="farms",
     )
     name = models.CharField(max_length=150)
+    county = models.CharField(max_length=100, blank=True)
     location = models.CharField(max_length=255)
     latitude = models.DecimalField(
         max_digits=9,

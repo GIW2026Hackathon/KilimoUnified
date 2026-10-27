@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.test import override_settings
 from django.urls import reverse
 from unittest.mock import patch
@@ -151,6 +151,31 @@ class RiskAlertTests(TestCase):
 		self.assertEqual(self.client.post(reverse("core:alert_action", args=[alert.pk, "resolve"])).status_code, 302)
 		alert.refresh_from_db()
 		self.assertEqual(alert.status, RiskAlert.Status.RESOLVED)
+
+	def test_alert_list_and_detail_render_the_expected_templates(self):
+		alert = RiskAlert.objects.create(
+			farm=self.farm, risk_level=RiskAlert.RiskLevel.HIGH,
+			message="Check recorded stock.", recommended_action="Review this feed.",
+		)
+		self.client.force_login(self.farm.owner)
+		listing = self.client.get(reverse("core:alerts"))
+		self.assertEqual(listing.status_code, 200)
+		self.assertTemplateUsed(listing, "monitoring/alerts.html")
+		detail = self.client.get(reverse("core:alert_detail", args=[alert.pk]))
+		self.assertEqual(detail.status_code, 200)
+		self.assertTemplateUsed(detail, "monitoring/alert_detail.html")
+
+	def test_alert_state_change_requires_csrf(self):
+		alert = RiskAlert.objects.create(
+			farm=self.farm, risk_level=RiskAlert.RiskLevel.HIGH,
+			message="Check recorded stock.", recommended_action="Review this feed.",
+		)
+		client = Client(enforce_csrf_checks=True)
+		client.force_login(self.farm.owner)
+		response = client.post(reverse("core:alert_action", args=[alert.pk, "acknowledge"]))
+		self.assertEqual(response.status_code, 403)
+		alert.refresh_from_db()
+		self.assertEqual(alert.status, RiskAlert.Status.ACTIVE)
 
 	@override_settings(MAZIWASHIELD_AI_API_KEY="", MAZIWASHIELD_AI_API_URL="", MAZIWASHIELD_AI_MODEL="")
 	def test_ai_unconfigured_returns_fallback_and_does_not_change_risk(self):

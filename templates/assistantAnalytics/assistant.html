@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Farm assistant | MaziwaShield{% endblock %}
+{% block content %}
+<main class="min-h-screen bg-base-200 p-4 sm:p-8">
+  <div class="mx-auto max-w-4xl space-y-5">
+    <a class="link" href="{% url 'core:dashboard' %}">Back to dashboard</a>
+    <header>
+      <p class="text-sm text-base-content/60">MaziwaShield</p>
+      <h1 class="text-3xl font-bold">Farm assistant</h1>
+      <p>Ask about recorded inventory, coverage, risk, alerts, or stored weather forecasts.</p>
+    </header>
+
+    {% if not farms %}
+    <div role="status" class="alert alert-info">Add a farm before asking farm-specific questions.</div>
+    {% else %}
+    <section class="card bg-base-100 shadow">
+      <div class="card-body">
+        <form method="post" class="space-y-4">
+          {% csrf_token %}
+          {% if form.non_field_errors %}<div role="alert" class="alert alert-error">{{ form.non_field_errors }}</div>{% endif %}
+          <div>
+            <label class="label" for="{{ form.farm.id_for_label }}">{{ form.farm.label }}</label>
+            {{ form.farm }}
+            {% if form.farm.errors %}<p class="text-error" role="alert">{{ form.farm.errors|striptags }}</p>{% endif %}
+          </div>
+          <div>
+            <label class="label" for="{{ form.question.id_for_label }}">Your question</label>
+            {{ form.question }}
+            {% if form.question.errors %}<p class="text-error" role="alert">{{ form.question.errors|striptags }}</p>{% endif %}
+          </div>
+          <button class="btn" type="submit">Ask about this farm</button>
+        </form>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if result %}
+    <section class="card bg-base-100 shadow" aria-live="polite">
+      <div class="card-body space-y-3">
+        <h2 class="card-title">Verified answer</h2>
+        <p>{{ result.answer }}</p>
+        {% if result.ai_explanation %}
+        <div class="rounded-box bg-base-200 p-4">
+          <h3 class="font-semibold">AI wording</h3>
+          <p>{{ result.ai_explanation }}</p>
+          <p class="mt-2 text-sm text-base-content/70">This wording is supplementary. The verified answer and farm records above remain authoritative.</p>
+        </div>
+        {% elif result.ai_status == "NOT_CONFIGURED" %}
+        <p class="text-sm text-base-content/70">AI provider is not configured; this answer uses the deterministic farm data service.</p>
+        {% elif result.ai_status == "UNAVAILABLE" %}
+        <p class="text-sm text-base-content/70">AI provider is unavailable; showing the deterministic farm data answer.</p>
+        {% elif result.ai_status == "INVALID_RESPONSE" %}
+        <p class="text-sm text-base-content/70">The AI response did not pass validation; showing the deterministic farm data answer.</p>
+        {% endif %}
+        <details>
+          <summary class="cursor-pointer font-semibold">Show the farm data used</summary>
+          <div class="mt-3 space-y-3">
+            <p>Assessment: {{ result.evidence.risk_level }} (inventory {{ result.evidence.inventory_risk_level }}). {{ result.evidence.explanation }}</p>
+            {% if result.evidence.inventory %}
+            <div class="overflow-x-auto">
+              <table class="table table-sm">
+                <thead><tr><th>Feed</th><th>Usable kg</th><th>Daily use kg</th><th>Coverage</th></tr></thead>
+                <tbody>{% for item in result.evidence.inventory %}<tr><th>{{ item.feed_type }}</th><td>{{ item.usable_stock_kg }}</td><td>{% if item.daily_consumption_kg is not None %}{{ item.daily_consumption_kg }}{% else %}Unknown{% endif %}</td><td>{% if item.coverage_days is not None %}{{ item.coverage_days }} days{% else %}Unknown{% endif %}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            {% else %}<p>No feed inventory is recorded.</p>{% endif %}
+            <p>Weather data: {{ result.evidence.weather.status|title }}. Weather is contextual and does not change the inventory risk.</p>
+            {% if result.evidence.weather.indicators %}<ul class="list-disc pl-6">{% for day in result.evidence.weather.indicators %}<li>{{ day.date }} · {{ day.freshness|title }} · precipitation {% if day.precipitation_mm is not None %}{{ day.precipitation_mm }} mm{% else %}unknown{% endif %} · minimum temperature {% if day.temperature_min_c is not None %}{{ day.temperature_min_c }} °C{% else %}unknown{% endif %} · maximum temperature {% if day.temperature_max_c is not None %}{{ day.temperature_max_c }} °C{% else %}unknown{% endif %}</li>{% endfor %}</ul>{% endif %}
+            <p>Rules: {{ result.evidence.rule_ids|join:", " }}</p>
+            <p class="text-sm text-base-content/70">Assessment time: {{ result.evaluated_at|date:"M j, Y, P" }}</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    {% endif %}
+
+    <p class="text-sm text-base-content/70">The assistant only uses data for the selected farm that you own. It cannot access supplier quotes or place orders. Forecasts are indicators, not proof of feed availability.</p>
+  </div>
+</main>
+{% endblock %}
